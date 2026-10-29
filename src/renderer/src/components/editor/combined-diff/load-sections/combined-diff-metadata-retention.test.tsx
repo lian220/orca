@@ -35,12 +35,7 @@ it.each([10, 100])('retains %i visited rows when one path changes metadata', asy
   const review: Review = { status: initial, file, viewStateKey: `metadata-${count}` }
   const hook = renderReview(review)
   await flush(count)
-  act(() => {
-    for (let index = 0; index < count; index += 1) {
-      hook.result.current.loader.loadSection(index)
-    }
-  })
-  await flush(count)
+  await visitAll(hook, count)
   expect(hook.result.current.registry.loadedIndicesRef.current.size).toBe(count)
   act(() =>
     hook.result.current.setSectionHeights(
@@ -64,12 +59,7 @@ it.each([10, 100])('retains %i visited rows when one path changes metadata', asy
     }
   }
   expect(hook.result.current.sections[changedIndex]?.added).toBe(2)
-  act(() => {
-    for (let index = 0; index < count; index += 1) {
-      hook.result.current.loader.loadSection(index)
-    }
-  })
-  await flush(count)
+  await visitAll(hook, count)
   expect(mocks.fetch).toHaveBeenCalledTimes(1)
   expect(mocks.fetch.mock.calls[0]?.[0].entry.path).toBe(initial[changedIndex]?.path)
   expect(hook.result.current.registry.loadedIndicesRef.current.size).toBe(count)
@@ -247,7 +237,10 @@ it.each(['collapsed', 'offscreen'] as const)(
         prev.map((section, index) => (index === 7 ? { ...section, collapsed: false } : section))
       )
     )
-    act(() => hook.result.current.loader.loadSection(7))
+    act(() => {
+      hook.result.current.registry.renderedIndicesRef.current.add(7)
+      hook.result.current.loader.loadSection(7)
+    })
     await flush()
     expect(mocks.fetch).toHaveBeenCalledTimes(1)
     expect(hook.result.current.registry.loadedIndicesRef.current.has(7)).toBe(true)

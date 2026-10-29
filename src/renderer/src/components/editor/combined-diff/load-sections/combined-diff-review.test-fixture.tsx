@@ -155,12 +155,15 @@ export async function visitAll(
   hook: ReturnType<typeof renderReview>,
   count: number
 ): Promise<void> {
-  act(() => {
-    for (let index = 0; index < count; index += 1) {
+  const renderedIndices = hook.result.current.registry.renderedIndicesRef.current
+  for (let index = 0; index < count; index += 1) {
+    act(() => {
+      hook.result.current.registry.renderedIndicesRef.current = new Set([index])
       hook.result.current.loader.loadSection(index)
-    }
-  })
-  await flush(count)
+    })
+    await flush()
+  }
+  hook.result.current.registry.renderedIndicesRef.current = renderedIndices
 }
 
 export async function advanceReloadTimer(): Promise<void> {
