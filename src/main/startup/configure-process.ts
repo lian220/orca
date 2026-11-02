@@ -1,3 +1,4 @@
+import { maintainedProfilePath } from './maintained-build'
 import { app } from 'electron'
 import { quitProcess } from './process-quit-request'
 import { existsSync, mkdirSync } from 'node:fs'
@@ -201,6 +202,16 @@ export function configureDevUserDataPath(isDev: boolean): void {
     return
   }
 
+  const maintainedProfile = maintainedProfilePath(
+    '',
+    app.getPath('appData'),
+    process.execPath,
+    process.env.ORCA_MAINTAINED_VERIFICATION_PROFILE
+  )
+  if (maintainedProfile) {
+    app.setPath('userData', maintainedProfile)
+    return
+  }
   if (!isDev) {
     return
   }

@@ -1,0 +1,100 @@
+# 20261103 Hermes 커스텀 통합 — 구현 전 시험 케이스
+
+## 근거와 적용 경계
+
+- 근거: 사용자가 승인한 lian220/orca 통합 1단계 및 후속 통합 검증 요구, 후보의 [AGENTS.md](../../AGENTS.md), [.github/CONTRIBUTING.md](../../.github/CONTRIBUTING.md).
+- 공통 기준: agent-config의 `rules/docs-lifecycle.md`, `rules/architecture-guides/typescript.md`, `react.md`. 케이스와 기대 결과만 이 문서에 두며 실제 실행 결과·근거 값은 후속 보고와 요청된 PR 본문에 남긴다.
+- 후보: `/Users/imdoyeong/workSpaces/lian-infra/.orca-hermes-integration-20261103`, 브랜치 `codex/orca-hermes-sync-integration`, 기준 `3b30779a1f27cd96c357000ee80c73d5933e2da8`.
+- 입력: 형제 디렉터리 `.orca-hermes-integration-input-20261103/`의 `manifest.json`, `local-tracked.patch`, `local-untracked-source.tar`, `remote-custom.patch`. 입력은 읽기 전용이다.
+- remote 식별자는 `94482f31d966d7649e44038505ae0bbe0319ca33`이다. 단일 커밋·107커밋 뒤처짐은 입력 전제이며 실제 Git 객체 확인과 구분한다. 오래된 remote 트리 전체로 교체하거나 downgrade하지 않는다.
+- 1단계의 유일한 변경은 이 문서다. patch 적용·tar 추출·제품 코드 수정·의존성 설치·빌드·앱 실행·설치·재시작·기존 대화 중단·커밋·push·PR·merge·화면 잠금은 이 단계에서 수행하지 않는다.
+- 후속 단계에서도 원본 앱·프로필·외부 pinned-source와 기존 `node_modules`를 변경하지 않는다. 현재 연결과 후보 clone을 유지하며 다른 호스트·새 worktree로 옮기거나 Jev를 다시 호출하지 않는다.
+
+## 준비 데이터와 실제 입구
+
+- 시험 식별자는 `LIAN-HERMES-SYNC-20261103-<케이스>-<일련번호>`를 사용한다. 세션·계정·경로는 합성 fixture이며 실제 세션 ID 파일·대화 DB·인증·개인 기억은 읽지 않는다.
+- 파일 입구는 후보 Git 및 입력의 patch 헤더·tar member·manifest다. 비교용 복원은 먼저 메모리에서 수행하고, 적용은 별도 승인된 구현 단계에서 후보에만 수행한다.
+- 외부 ACP 등록 fixture는 시험 전용 임시 디렉터리의 소유자 전용 `0600` JSON이다. 기본값은 `{ "version": 1, "agents": [{ "agent": "hermes", "command": "/fixture/hermes-acp", "args": ["--stdio"] }] }`이며 `team-agent`, `other-agent` 분기를 함께 준비한다. 실제 실행 가능 경로는 후속 시험에서 소유한 fixture 프로세스로 대체한다.
+- 자동 시험 입구는 기존 `openAcpAdapterRig`의 ACP initialize·`session/load`·`session/prompt`와 host harness의 `host.send`다. 공개 dispatch/host 입구를 통과시키며 중간 journal을 직접 조작해 성공을 만들지 않는다. 기존 protocol fixture·spy는 단위 시험용이며 실제 Hermes/UI 인수를 대체하지 않는다.
+- 실제 인수 입구는 후속 별도 범위의 숨겨진 Orca 시험 renderer와 실제 Hermes 연결이다. 기존 사용자 프로필을 복제하거나 현재 대화로 오류·동시 전송·재시작을 시험하지 않는다. 실제 연결을 검증하지 않은 항목은 단위 시험 통과와 별개로 미완료다.
+- 각 케이스의 근거는 아래 표의 사용자 요구와 명시된 현재 소스·입력이다. 준비 fixture는 케이스별로 새로 만들고 종료 후 소유 프로세스·파일·포트만 정리한다.
+
+## 후보와 입력 안전성
+
+| ID | 근거·준비 데이터 | 실제 입력·입구 | 기대 결과 |
+|---|---|---|---|
+| P01 | 사용자 지정 host/user/cwd·후보·기준 SHA | 현재 연결에서 `hostname`, `id -un`, 실제 cwd 확인; 후보에서 `git rev-parse --show-toplevel`, `git branch --show-current`, `git rev-parse HEAD`, `git rev-parse --git-dir --git-common-dir`, `git status --short --untracked-files=all`을 실행한다. 새 문서는 `git check-ignore -v`와 경로 한정 `git status --ignored`로도 확인한다. | host는 `imdoyeong-ui-MacBookPro.local`, 사용자는 `imdoyeong`, 부모 cwd와 후보 realpath는 위 지정값이다. 브랜치·HEAD가 정확히 일치하며 `.git`은 symlink나 worktree 포인터가 아닌 독립 디렉터리다. `commondir`·objects alternates에 의존하지 않는다. 문서 작성 전 변경은 없고 작성 후에는 이 문서만 새로 존재한다. 현행 `docs/**` 규칙에 걸리면 ignored 상태를 명시하며 일반 status가 비었다고 파일 부재로 판단하지 않는다. 불일치·예상 밖 변경이면 쓰기를 중단하고 reset·덮어쓰기를 하지 않는다. |
+| P02 | 읽기 전용 입력 4개·manifest | 파일 종류·realpath·크기·SHA-256을 읽고 manifest의 base/remote 및 tar 목록을 대조한다. patch의 양쪽 경로·rename/copy 헤더·파일 mode, tar의 모든 member·link target·목적지 기존 부모를 검사한다. | base/remote가 지정값과 같고 manifest의 17개 source 목록과 tar의 17개 일반 파일이 정확히 일치한다. 중복·tracked/tar 충돌이 없다. 절대경로·드라이브 경로·`..`·`.git`·`node_modules`·특수파일·후보 밖 symlink/hardlink 및 부모 symlink 이탈이 없으며 후보 밖 쓰기가 0회다. 의심스러운 항목은 원문 내용을 출력하지 않고 경로·종류만 보고한다. |
+| P03 | patch·tar 내부 내용 및 비밀 탐지용 합성 표본 | 추출·적용 없이 메모리에서 키 본문·알려진 token 형식·credential 대입·비밀 파일명을 검사한다. 합성 절대경로·traversal·link·비밀 표본도 같은 검사기에 전달한다. | 실제 입력은 정의한 패턴의 탐지 건수가 0이며 합성 위험 입력은 모두 거절된다. 실제 비밀의 부재를 패턴 검사만으로 보증하지 않는다. 탐지 시 비밀 원문·주변 줄을 stdout/log/diff에 남기지 않고 후속 적용을 차단한다. 입력 4개의 SHA-256은 검사 전후 동일하다. |
+| P04 | 기준 트리·local patch 58개 경로·tar 17개 경로 | 기준 blob에 unified hunk의 원본 context를 검증하며 메모리 복원하고 각 patch의 새 blob 해시와 대조한다. 후속 적용 전 동일 입력으로 재검사한다. | 58개 tracked 경로와 17개 untracked source, 합계 75개가 빠짐없이 복원된다. 58개 결과 blob 해시가 patch 새 index와 일치한다. 기준의 다른 파일은 변경되지 않는다. source tar에 있던 시험·설정·문서도 누락 없이 후보에만 복원한다. context 불일치면 강제 적용하지 않는다. |
+| P05 | remote patch 56개 경로와 local 복원본 | remote의 원본 blob이 있으면 메모리에서 remote 결과를 재구성해 직접 byte 비교한다. 모든 56개는 local 결과의 Git blob 해시와 remote 새 index를 대조한다. | 47개는 byte 동일이며 아래 지정 9개만 다르다. 해시는 원문 byte 기준으로 계산하고 줄바꿈·JSON 정렬로 차이를 숨기지 않는다. 원본 blob이 없으면 해당 파일의 완전한 remote 본문 비교를 미확인으로 남긴다. Git 객체가 없으면 단일 커밋·107커밋 차이 검증도 미확인으로 남기고 원본 소스 접근·fetch로 범위를 넓히지 않는다. |
+| P06 | 아래 9개 차이와 local 전용 변경 | 후속 구현 전에 파일별 local 동작·remote hunk·현재 기준을 대조하고 remote 전용으로 유효한 수정만 회귀시험으로 선택한다. | 47개 동일 파일을 중복 적용하지 않는다. 9개를 통째로 덮어쓰지 않으며 strict resume·concurrent admission·verification profile·현재 UI/번역을 보존한다. local 전용 경로를 삭제하지 않는다. 오래된 upstream 변경은 끌어오지 않는다. 선택 근거와 의도한 diff를 후속 보고에 남긴다. |
+
+### 9개 차이의 검증 대상
+
+| 경로 | 반드시 보존·대조할 계약 |
+|---|---|
+| `src/main/acp/acp-launch-specs.ts` | `resumeFailurePolicy: 'fail'`, `concurrentSendPolicy: 'reject'` 타입과 built-in/external 등록 병존 |
+| `src/main/acp/external-acp-launch-specs.ts` | Hermes·team-agent만 strict/busy 정책을 가지며 일반 external agent는 기존 동작 유지 |
+| `src/main/acp/external-acp-launch-specs.test.ts` | 등록 안전성·정책별 capabilities·default/explicit 경로 분기 시험 보존 |
+| `src/main/startup/configure-process.ts` | maintained 전용 프로필 및 `ORCA_MAINTAINED_VERIFICATION_PROFILE` 전달 보존 |
+| `src/main/startup/maintained-build.ts` | 절대경로 verification profile만 허용하고 official/dev 프로필 경계 보존 |
+| `src/main/startup/maintained-build.test.ts` | verification profile과 updater 격리 회귀시험 보존 |
+| `src/renderer/src/components/tab-bar/TabBarCreateEntryRow.tsx` | 현재 기준의 row·이벤트·접근성 동작과 local 커스텀을 보존하며 remote 전용 유효 차이만 선별 |
+| `src/renderer/src/i18n/locales/en.json` | 기존 upstream/local key와 보간값을 보존하며 remote 전용 유효 문구만 선별 |
+| `src/renderer/src/i18n/locales/ko.json` | 영어와 대응하는 key·보간 계약, 한국어 문구 및 기존 key 보존 |
+
+## 기능 보존과 실패 회귀시험
+
+| ID | 근거·준비 데이터 | 실제 입력·입구 | 기대 결과 |
+|---|---|---|---|
+| F01 | local strict resume, `acp-structured-shared-session-policy.test.ts`·기존 adapter resume 시험; 합성 saved ID | 등록에서 생성된 Hermes·team-agent spec으로 기존 ACP handshake를 열고 saved ID의 `session/load`를 성공시킨 뒤 후속 prompt를 보낸다. | saved native ID가 유지되고 load 1회, 새 대화 생성 0회다. 후속 prompt가 같은 대화로 1회 전달되며 기존 대화가 교체되지 않는다. 등록→spec→definition→adapter의 실제 정책 전달도 검증한다. |
+| F02 | 같은 saved ID, `resumeFailurePolicy: 'fail'`; load 오류 `-32002`, `-32603`, 연결 끊김 | 각 오류를 ACP `session/load` 응답/연결 입구에서 반환한다. 정책이 없는 기존 agent의 대조 케이스도 기존 시험대로 실행한다. | strict agent는 open failure를 반환하고 `session/new`·`session/prompt`는 각각 0회다. saved ID를 지우거나 다른 대화·실행기·호스트로 자동 전환하지 않는다. 일반 agent의 기존 복구 정책은 기존 기대값을 유지한다. |
+| F03 | local `structured-agent-session-concurrent-admission.test.ts`; 두 caller·서로 다른 operation ID | 같은 conversation에 두 `host.send`를 `Promise.all`로 전달한다. 첫 handover 전 경합도 포함한다. | 정확히 1개 요청만 성공하고 다른 1개는 `agent_session_operation_invalid`, `details.reason: 'turnActive'`로 거절된다. provider dispatch 1회·cancel 0회·journal submission 1개·queue 0개다. |
+| F04 | 첫 요청 active; 두 번째 메시지의 delivery는 미지정 또는 `queue-if-active` | 두 번째 caller에서 `host.send`를 보내고 첫 요청의 동일 operation ID도 재전달한다. 첫 완료 뒤 두 번째 메시지를 새 operation ID로 명시 재전송한다. | active 동안 두 번째 메시지는 submission·queue에 남지 않고 자동 후속 실행도 0회다. 첫 요청 재전달은 `replayed: true`이며 dispatch 횟수가 늘지 않는다. 첫 완료 뒤 명시 재전송만 1회 새로 dispatch한다. 첫 실행은 취소되지 않는다. |
+| F05 | local `acp-structured-dispatch.ts`; 첨부 읽기 및 `beforeDispatch` barrier | adapter dispatch 입구에서 준비 전 busy, 첨부 준비 중 busy 전환, `beforeDispatch` 대기 중 busy 전환을 각각 재현한다. | 준비 전 busy는 첨부 읽기·option 적용·prompt 전송을 시작하지 않는다. 최종 handover 직전 busy도 `sessionBusy` rejected이고 prompt·cancel 추가 호출이 0회다. 최종 busy 확인과 실제 dispatch 사이에 await로 경합 틈을 만들지 않는다. |
+| F06 | 기존 ACP dispatch 계약·abort signal·소유권 fence | 실제 adapter dispatch로 첨부 실패, 준비 중 child 교체/종료, option 거절, abort, `beforeDispatch` 실패를 각각 넣고 정상 입력도 넣는다. | 실패한 메시지의 `session/prompt`는 0회며 기존 rejection/취소 원인과 fence 판정이 보존된다. 정상 입력은 prompt·clientMessageId·requestedAt을 보존해 1회 전달한다. `{ state: 'admitted' }`만으로 provider 실행 완료를 기록하지 않는다. |
+| F07 | local `agent-session-failure*`, `structured-agent-session-dispatch-rejection*`, renderer sender 시험 | busy 거절 및 실제 write/transport/host 실패를 각각 host→journal→renderer 상태/문구 경로에 전달한다. | busy는 `sessionBusy`, category `undelivered`, verdict `null`이며 새 provider 실패나 성공으로 집계하지 않는다. 메시지는 미전송으로 남고 자동 retry·대화 교체·기존 turn cancel은 0회다. 실제 전송 실패는 기존 오류 종류·상태·사용자 문구를 유지하며 오류를 숨기지 않는다. |
+| F08 | external registration source/시험; private fixture | Hermes·team-agent·other-agent 등록, reserved ID 충돌·중복·잘못된 JSON·상대경로·큰 파일·POSIX symlink/권한 오류를 등록 읽기 입구에 전달한다. default 부재와 명시 경로 부재도 분리한다. | Hermes·team-agent의 resume 정책은 `fail`, concurrent 정책은 `reject`이며 definition capabilities까지 전달된다. other-agent에는 두 정책이 강제되지 않는다. 잘못된 등록은 거절하고 built-in은 남는다. default 부재는 빈 목록, explicit 오류는 default로 fallback하지 않는다. command/args 변경은 account pin을 바꾼다. Windows에서는 POSIX 전용 검사를 skip한 사실을 따로 기록한다. |
+| F09 | maintained profile/updater 소스·시험; 합성 appData·execPath | `maintainedProfilePath`에 Hermes/official/dev 이름, Hermes 실행 파일 경로, 절대/상대 verification 경로를 넣는다. `configureDevUserDataPath` 호출은 기존 Electron mock 입구에서 검증한다. | maintained 기본값은 `appData/orca-hermes`; 절대 verification 경로를 지정하면 그 값만 사용한다. 상대경로는 거절한다. official/dev는 maintained 경로로 이동하지 않는다. configure 함수가 verification 변수를 실제로 전달한다. maintained에 official updater가 활성화되지 않는다. 실제 프로필·로그인 HOME은 읽거나 바꾸지 않는다. |
+| F10 | local host label·agent menu·launch routing·initial chat 커스텀과 관련 시험 | 복원된 관련 시험에 git workspace·folder workspace, local·remote/SSH host fixture, Hermes/team-agent 및 built-in agent 선택을 넣는다. | 선택 host/cwd와 표시 host가 일치하고 다른 host 상태가 섞이지 않는다. 메뉴·기본 chat·실패 메시지·launch persistence가 기존 기대값을 유지한다. built-in 지원과 remote 혼합 버전 호환성을 일괄 제거하지 않는다. |
+| F11 | 위 9개 차이, 현재 기준 및 local UI/번역 | `TabBarCreateEntryRow`의 현재 호출부·관련 시험을 통해 선택/생성/keyboard 입력을 넣고 en/ko JSON key·보간값을 대조한다. | 선택/생성 요청이 중복 발생하지 않고 선택 agent/host가 보존된다. 필요한 기존 key가 삭제되지 않으며 en/ko 보간 변수가 대응한다. DOM/JSON 시험 통과를 실제 Electron 렌더링 통과로 간주하지 않는다. UI 수정 전 STYLEGUIDE와 해당 세부 규칙을 읽는다. |
+| F12 | 후속 조사에서 확인한 새 버그마다 별도 반례 | 먼저 기존 공개 입구를 쓰는 최소 회귀시험을 추가해 현재 코드에서 실패시킨다. 실패 원인이 의존성/환경 문제가 아니라 해당 버그임을 확인한 뒤 필요한 최소 구현만 바꾸고 같은 시험과 영향시험을 실행한다. | 수정 전 실패→최소 구현→수정 후 통과 근거가 모두 남는다. remote hunk가 반례를 해결하지 못하면 채택하지 않는다. 테스트를 삭제·완화하거나 대체 기대값으로 맞추지 않는다. 관련 TypeScript/React 가이드·기존 공통 로직을 따르고 제품 로직을 중복 구현하지 않는다. |
+
+## 자동 검증과 후보 빌드
+
+다음 명령은 후속 구현·검증 단계용이다. 후보 루트에서 Node 24와 packageManager/lockfile에 고정된 pnpm 12.14.0, `config/.bun-version`의 Bun 1.4.4 및 후보 전용 의존성이 준비된 뒤에만 실행한다. 이 문서 작성 단계에서는 설치하거나 실행하지 않는다.
+
+`HUSKY=0`은 `prepare: husky` hook을 끄는 값이며 postinstall/native rebuild·앱 실행·전역 CLI 설치까지 막는 값은 아니다. `ORCA_BACKGROUND_LAUNCH=1`은 모든 후속 시험·빌드에 전달한다. `ORCA_PNPM_GLOBAL_VIRTUAL_STORE=0`은 install부터 pnpm run까지 일관되게 적용한다. store/virtual-store/cache와 writable native 산출물도 후보 전용으로 두고 기존 `node_modules`를 symlink·공유 쓰기로 재사용하지 않는다. 후속 설치는 별도 승인 범위에서 frozen lockfile을 유지한다.
+
+```bash
+export HUSKY=0
+export ORCA_BACKGROUND_LAUNCH=1
+export ORCA_PNPM_GLOBAL_VIRTUAL_STORE=0
+
+pnpm tc
+pnpm test src/main/acp/acp-structured-shared-session-policy.test.ts src/main/acp/acp-structured-session-adapter-resume.test.ts src/main/acp/external-acp-launch-specs.test.ts src/main/acp/external-acp-registration.test.ts src/main/native-chat/agent-session-wire/structured-agent-session-concurrent-admission.test.ts src/main/startup/maintained-build.test.ts --maxWorkers=2
+pnpm test src/shared/structured-agent-session-dispatch-rejection.test.ts src/renderer/src/components/native-chat/structured-agent-session-message-sender.test.ts src/renderer/src/lib/launch-structured-agent-session.test.ts src/renderer/src/lib/agent-session/launch src/renderer/src/lib/new-tab-agent-menu-rows.test.ts src/renderer/src/runtime/web-runtime-initial-default-chat.test.ts --maxWorkers=2
+pnpm test:changed --maxWorkers=2
+pnpm check:changed --maxWorkers=2
+
+pnpm run build:packages
+node config/scripts/build-cli.mjs
+pnpm run build:electron-vite
+git diff --check
+```
+
+| ID | 근거·준비 데이터 | 실제 입력·입구 | 기대 결과 |
+|---|---|---|---|
+| V01 | `package.json` engines/packageManager, lockfile, pnpmfile, Bun pin | 버전 조회·의존성 realpath 확인 후 위 환경을 적용한다. | Node major=24, pnpm=12.14.0, Bun=1.4.4다. 후보 내 전용 `node_modules`·store·native build 영역을 사용한다. 버전 불일치·후보 밖 writable 경로가 있으면 검증을 시작하지 않고 설치/실행 검증 미완료로 기록한다. |
+| V02 | F01~F12 및 복원된 기존 시험 | 위 명시 시험·`pnpm tc`·영향시험·`pnpm check:changed --maxWorkers=2`를 실행한다. 정적 import graph 밖 fixture/동적 경로는 해당 회귀시험을 명시 실행한다. | 모든 명령 exit=0, 필요한 케이스 실패=0이다. skip/no-tests/cache hit를 케이스 실행으로 합산하지 않는다. `check:changed`의 실제 기준 ref·merge-base와 선택 파일/시험을 확인하고 누락은 기준 SHA를 명시한 추가 검사로 보완한다. 타입 오류·진짜 회귀 실패를 환경 문제로 덮지 않는다. |
+| V03 | build scripts와 `electron.vite.config.ts` | 위 `build:packages`→raw CLI compiler→`build:electron-vite` 경로를 실행한다. CLI compiler의 성공 및 `out/cli/index.js`, `out/main/index.js`, preload/renderer 산출물과 renderer boot graph를 확인한다. | exit=0이고 최신 후보 소스로 산출된다. 앱·개발 서버가 실행되지 않고 `/usr/local/bin/orca-dev`·원본 앱·프로필에 쓰지 않는다. `build:cli`의 `prepare:cli-output`→`install-dev-cli.mjs`는 호출하지 않는다. 이 결과는 번들 빌드 검증이며 `.app` 패키징·서명·설치·실제 실행 성공을 뜻하지 않는다. |
+| V04 | 유지관리 패키징 입력 `config/electron-builder.maintained.cjs` | 후속 패키징이 승인되면 먼저 builder hooks·native 준비와 모든 쓰기 목적지를 확인한다. 후보 전용 출력에 `--config config/electron-builder.maintained.cjs --dir --arm64 --publish never`를 명시하는 경로를 검토한다. | appId=`com.lian.orca.hermes`, productName=`Orca Hermes`, 출력은 후보의 `dist-maintained`, publish는 꺼져 있다. 전역 CLI 설치·자동 실행·기존 앱 교체가 없다. hooks/native 검토와 패키징을 실제 수행하기 전에는 완성된 후보 앱이라고 보고하지 않는다. 일반 `build`, `build:desktop`, `build:mac`, `build:unpack`을 부작용 확인 없이 대체 경로로 실행하지 않는다. |
+
+## 후속 실제 UI 인수와 보존 경계
+
+| ID | 근거·준비 데이터 | 실제 입력·입구 | 기대 결과 |
+|---|---|---|---|
+| U01 | 후보 AGENTS의 Electron UI 규칙; 검증된 후보 산출물·소유 시험 프로필 | 별도 승인된 후속 단계에서 `$electron`/Playwright CDP로 숨겨진 renderer를 확인한다. 새 소유 시험 대화에서 Hermes 선택→첫 요청→같은 대화 후속 요청 및 busy 거절을 실제 UI 입구로 보낸다. | 실제 Hermes 응답·같은 native conversation 재개·미전송 문구·중복/취소 없음·host/cwd 일치를 화면과 protocol 결과로 대조한다. 기존 사용자 대화를 중단하지 않는다. `ORCA_BACKGROUND_LAUNCH=1`을 적용하고 show/showInactive/bringToFront/app.focus/OS activation을 하지 않는다. computer-use·화면 잠금·native focus 시험은 수행하지 않는다. |
+| U02 | 연결 실패·resume 거절·등록 오류 fixture와 actual connection 인수 | 소유 시험 연결에서 오류와 재연결을 실제 입구에 넣고 en/ko 표시·재시도 상태를 관찰한다. | 원인을 표시하고 자동 새 대화·다른 실행기·다른 호스트로 전환하지 않는다. 기존 대화/설정·원본 앱/프로필은 보존된다. UI·실제 Hermes·패키지 조합을 실행하지 않은 경우 자동 시험·빌드 통과와 별개로 실제 인수 미완료라고 보고한다. |
+| U03 | 모든 단계의 시험용 자원과 입력 해시·최종 Git 상태 | 소유 fixture 프로세스·임시 파일·포트만 정리하고 입력 해시와 후보 Git 상태를 다시 읽는다. | 사용자 서버·대화·프로필을 종료/삭제하지 않는다. 입력 4개는 byte 동일하다. 최종 변경은 해당 단계의 승인된 파일에 한정된다. 설치·재시작·커밋·push·PR·merge는 각 별도 승인 전까지 실행하지 않는다. |

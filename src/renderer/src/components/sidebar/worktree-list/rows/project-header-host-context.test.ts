@@ -348,3 +348,13 @@ describe('project header host context', () => {
     ).toBe(0)
   })
 })
+
+it('shows configured host identity without requiring a name collision when requested', () => {
+  const contexts = getProjectHeaderHostContexts({
+    rows: [rows[0]!],
+    hosts,
+    repoMap,
+    showSingleHostLabels: true
+  })
+  expect(contexts.get(rows[0]!.key)?.hostId).toBe('local')
+})

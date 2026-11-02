@@ -26,6 +26,7 @@ export type ProjectHeaderHostContext = {
 }
 
 export function getProjectHeaderHostContexts(args: {
+  showSingleHostLabels?: boolean
   rows: readonly HostSectionRow[]
   visibleProjectRepoIdsBySection?: ReadonlyMap<string, ReadonlySet<string>>
   hosts: readonly ExecutionHostRegistryEntry[]
@@ -115,6 +116,9 @@ export function getProjectHeaderHostContexts(args: {
   }
   // Only colliding names across machines need a host label.
   return new Map(
-    [...candidates].filter(([key]) => (hostsByLabel.get(sectionLabels.get(key)!)?.size ?? 0) > 1)
+    [...candidates].filter(
+      ([key]) =>
+        args.showSingleHostLabels || (hostsByLabel.get(sectionLabels.get(key)!)?.size ?? 0) > 1
+    )
   )
 }

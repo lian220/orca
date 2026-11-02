@@ -1,4 +1,10 @@
 {
+  "repositoryHost": {
+    "local": "Local",
+    "remote": "Remote",
+    "unknown": "Repository host unknown",
+    "repository": "Repository"
+  },
   "agentLaunch": {
     "opencode": {
       "updateRequired": "OpenCode cannot safely start with a chosen model on this version. Update OpenCode to a supported release, or omit the model choice.",
@@ -18908,6 +18914,7 @@
         "attachmentUnreadable": "An attachment on this message couldn't be read, so the message was not sent.",
         "emptyMessage": "This message is empty, so it was not sent.",
         "commandUnavailable": "This command isn't available in {{agent}} chats, so it was not sent.",
+        "sessionBusy": "The agent is still working. This message was not sent. Wait for the current turn to finish.",
         "queueFull": "Too many messages were waiting for the agent, so this one was not sent.",
         "writeFailed": "Orca couldn't hand this message to the agent, so it was not sent.",
         "cancelled": "This message was withdrawn before the agent started it.",

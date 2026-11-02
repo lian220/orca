@@ -101,6 +101,12 @@ docs/**
 !docs/agents-md-refs/**
 !docs/agent-skill-sharing-implementation-checklist.md
 !docs/mobile-terminal-shortcut-bar.md
+!docs/test-cases/
+!docs/test-cases/20261028-external-acp.md
+!docs/test-cases/20261029-repository-host-labels.md
+!docs/development/
+!docs/development/external-acp-design.md
+!docs/development/external-acp.md
 
 .stably/*
 !.stably/docs/
@@ -153,3 +159,5 @@ ci-shards/
 /.build/windows-native-benchmark/
 
 .local/static-analysis-research/
+
+/dist-maintained/
