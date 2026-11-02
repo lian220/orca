@@ -686,5 +686,6 @@ it('keeps real collapsed same-name header contexts reactive through parent host 
   const renamedRenders = renders
   rerender([fixture.rows[0]!])
   expect(renders).toBeGreaterThan(renamedRenders)
-  expect(result.current.size).toBe(0)
+  expect(result.current.size).toBe(1)
+  expect(result.current.get(fixture.rows[0]!.key)).toMatchObject({ hostId: 'local' })
 })

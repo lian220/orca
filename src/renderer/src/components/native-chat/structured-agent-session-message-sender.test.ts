@@ -103,6 +103,25 @@ function phases(): string[] {
 }
 
 describe('structured agent session message sender', () => {
+  it('hands the second UI draft back when the owner refuses an active turn', async () => {
+    const calls = deferredCalls()
+    const sending = send('keep this second UI draft', {
+      target: { kind: 'environment', environmentId: 'lian-owner' }
+    })
+    await flush()
+    calls[0].resolve({
+      ok: false,
+      refusal: {
+        code: 'agent_session_operation_invalid',
+        details: { reason: 'turnActive' },
+        message: 'The agent is still working. This message was not sent.'
+      }
+    })
+    expect(await sending.outcome).toBe('returned')
+    expect(mocks.handBack).toHaveBeenCalledOnce()
+    expect(sendCalls()).toBe(1)
+  })
+
   beforeEach(() => {
     vi.useFakeTimers()
     mocks.call.mockReset()

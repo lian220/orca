@@ -52,7 +52,7 @@ import { useAppStore } from '../../store'
 import { structuredAgentLabel } from '@/lib/structured-agent-session-launch-label'
 import { useNativeChatStructuredComposerTransport } from './use-native-chat-structured-composer-transport'
 import { NativeChatStructuredGoalStrip } from './NativeChatStructuredGoalStrip'
-import { nativeChatPaneHeader } from './NativeChatPaneHeader'
+import { nativeChatRepositoryPaneHeader } from './NativeChatRepositoryHeader'
 import { structuredAgentSessionReadFailureNotice } from './structured-agent-session-read-failure-notice'
 import { useStructuredAgentSessionDeliveryNotices } from './use-structured-agent-session-delivery-notices'
 import { dispatchWasWithdrawn } from '../../../../shared/structured-agent-session-dispatch-rejection'
@@ -286,7 +286,7 @@ export function NativeChatStructuredSession(
       style={appearanceStyle}
       data-native-chat-scheme={appearanceStyle.colorScheme}
     >
-      {nativeChatPaneHeader(props, ownerWorktreeId, appearanceStyle.colorScheme, handOff)}
+      {nativeChatRepositoryPaneHeader(props, ownerWorktreeId, appearanceStyle.colorScheme, handOff)}
       <NativeChatContextClearFade clearing={controller.contextClear.clearing}>
         {find.isOpen ? <NativeChatFindBar find={find} isVisible={props.isVisible} /> : null}
         {viewState.kind === 'loading' || (viewState.kind === 'error' && !readFailure) ? (

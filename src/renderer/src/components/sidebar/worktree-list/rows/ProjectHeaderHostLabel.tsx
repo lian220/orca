@@ -1,3 +1,4 @@
+import { translate } from '@/i18n/i18n'
 import React, { useRef, useState } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { HostRowIcon } from '@/components/host-row-icon'
@@ -12,7 +13,12 @@ export function ProjectHeaderHostLabel({
   return (
     <span className="flex min-w-0 max-w-1/2 shrink-0 items-center gap-1 text-xs font-normal leading-4 text-muted-foreground">
       <HostRowIcon hostId={context.hostId} className="size-3.5 shrink-0" />
-      <span className="truncate">{context.label}</span>
+      <span className="truncate">
+        {context.hostId === 'local'
+          ? translate('repositoryHost.local', 'Local')
+          : translate('repositoryHost.remote', 'Remote')}{' '}
+        · {context.label}
+      </span>
     </span>
   )
 }

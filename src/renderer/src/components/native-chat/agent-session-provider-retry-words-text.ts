@@ -6,6 +6,13 @@ import {
 } from '../../../../shared/agent-session-failure-copy'
 
 export const PROVIDER_RETRY_PIECES = {
+  sessionNotRestored: (values) =>
+    translate(
+      'components.native-chat.failureWords.sessionNotRestored',
+      COPY.sessionNotRestored,
+      values
+    ),
+
   providerRateLimited: (values) =>
     translate(
       'components.native-chat.failureWords.providerRateLimited',
