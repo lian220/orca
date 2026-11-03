@@ -87,6 +87,9 @@ export async function initializeAcpStructuredSession(
       attaching.translator.finishLoad()
     } catch (error) {
       assertStarting()
+      if (spec.resumeFailurePolicy === 'fail') {
+        throw error
+      }
       takeover = acpReopenTakeover(error, resume, {
         over: connection.closed || input.abandoned(),
         now: now(),

@@ -2,7 +2,6 @@ import { launchStateLifecycle } from '../../structured-agent-session-launch-life
 export { launchStateLifecycle } from '../../structured-agent-session-launch-lifecycle'
 import { forgetStructuredSessionSelection } from '../../structured-agent-session-selection-controller'
 import { useSyncExternalStore } from 'react'
-import type { TuiAgent } from '../../../../../shared/tui-agent'
 import type { StructuredLaunchFailure } from './structured-agent-session-launch-failure'
 import type { StructuredAgentSessionResumeSource } from '../../../../../shared/agent-session/structured-agent-session-create'
 import { LOCAL_EXECUTION_HOST_ID, type ExecutionHostId } from '../../../../../shared/execution-host'
@@ -80,7 +79,7 @@ export function subscribeStructuredAgentLaunchStatus(listener: () => void): () =
 // Key by agent for concurrent Claude/Codex starts, and conversation so resumes never join unrelated blank launches.
 export function structuredLaunchIdentity(
   worktreeId: string,
-  agent: TuiAgent,
+  agent: string,
   scope: { resumeFrom?: StructuredAgentSessionResumeSource; executionHostId?: string } = {}
 ): string {
   const { resumeFrom, executionHostId = LOCAL_EXECUTION_HOST_ID } = scope

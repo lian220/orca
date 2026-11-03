@@ -3,6 +3,7 @@ import {
   type AgentPickerDraft,
   type AgentPickerEntry
 } from '../../../../shared/agent-launch-picker'
+import { isTuiAgent } from '../../../../shared/tui-agent-config'
 import { rowLabel, rowId, chatUnavailableLabel } from './tab-agent-row-presentation'
 import { getAgentCatalog } from '@/lib/agent-catalog'
 import { orderAgentLaunchPickerAgents } from '../../../../shared/agent-launch-picker-rows'
@@ -11,7 +12,7 @@ import type { TuiAgent } from '../../../../shared/tui-agent'
 import type { NewTabAgentMenuRow } from '@/lib/new-tab-agent-menu-rows'
 
 export type TabAgentLaunchOption = {
-  agent: TuiAgent
+  agent: string
   aliases: readonly string[]
   label: string
   disabled?: boolean
@@ -77,7 +78,9 @@ export function buildTabAgentLaunchOptionsFromRows(
   commandOverrides: Partial<Record<TuiAgent, string>> = {}
 ): TabAgentLaunchOption[] {
   return rows.map((row) => {
-    const base = buildTabAgentLaunchOptions([row.agent], commandOverrides)[0]
+    const base = isTuiAgent(row.agent)
+      ? buildTabAgentLaunchOptions([row.agent], commandOverrides)[0]
+      : { aliases: [normalizeAgentAlias(row.agent), compactAgentAlias(row.agent)] }
     return {
       ...base,
       agent: row.agent,
@@ -184,8 +187,9 @@ export function matchingAgentPickerLaunchOptions(
       aliases: [],
       id: `setup:${setup.entry.agent}:${setup.model.id}:${setup.choices.options?.effort ?? ''}:${surface}`,
       row: {
-        agent: setup.entry.agent,
-        kind: surface === 'chat' ? 'chat' : 'cli',
+        ...(surface === 'chat'
+          ? { kind: 'chat' as const, agent: setup.entry.agent }
+          : { kind: 'cli' as const, agent: setup.entry.agent }),
         executionHostId: setup.entry.rows[0]?.executionHostId
       },
       setup: { agent: setup.entry.agent, surface, choices: setup.choices },
@@ -201,10 +205,23 @@ export function configuredAgentPickerLaunchOption(
   return {
     ...option,
     row: {
-      agent: draft.agent,
-      kind: draft.surface === 'chat' ? 'chat' : 'cli',
+      ...(draft.surface === 'chat'
+        ? { kind: 'chat' as const, agent: draft.agent }
+        : { kind: 'cli' as const, agent: draft.agent }),
       executionHostId: option.row?.executionHostId
     },
     setup: draft
+  }
+}
+
+export function launchTabAgentOption(
+  option: TabAgentLaunchOption,
+  launchOption?: (option: TabAgentLaunchOption) => void,
+  launchAgent?: (agent: TuiAgent) => void
+): void {
+  if (launchOption) {
+    launchOption(option)
+  } else if (isTuiAgent(option.agent)) {
+    launchAgent?.(option.agent)
   }
 }

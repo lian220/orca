@@ -7,6 +7,7 @@ import {
   isTabEntryAbsolutePathLike
 } from './tab-create-entry-action'
 import {
+  launchTabAgentOption,
   configuredAgentPickerLaunchOption,
   findMatchingTabAgentLaunchOptions,
   matchingAgentPickerLaunchOptions
@@ -240,11 +241,7 @@ function TabBarCreateEntrySession({
       if (selectedOption.option.disabled) {
         return
       }
-      if (onLaunchAgentOption) {
-        onLaunchAgentOption(selectedOption.option)
-      } else {
-        onLaunchAgent?.(selectedOption.option.agent)
-      }
+      launchTabAgentOption(selectedOption.option, onLaunchAgentOption, onLaunchAgent)
       onDidOpenEntry?.()
       return
     }

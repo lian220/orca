@@ -60,6 +60,36 @@ describe('structured agent launch persistence', () => {
     })
   })
 
+  it('keeps external ACP IDs across a reload and rejects an empty agent ID', () => {
+    localStorage.setItem(
+      'orca:structuredAgentLaunches:v1',
+      JSON.stringify(
+        [
+          ['grok_session', 'grok'],
+          ['team-agent_session', 'team-agent'],
+          ['bogus_session', '']
+        ].map(([sessionId, agent]) => ({
+          sessionId,
+          agent,
+          lifecycle: 'pending',
+          surfaceAddress: { worktreeId: 'workspace', precedingTabIds: [false] },
+          clientOperationId: `${sessionId}-op`,
+          payloadFingerprint: 'fingerprint',
+          expectedRuntimeFence: null
+        }))
+      )
+    )
+
+    expect(readStructuredAgentLaunchRecord('grok_session')?.agent).toBe('grok')
+    expect(readStructuredAgentLaunchRecord('team-agent_session')).toMatchObject({
+      agent: 'team-agent',
+      lifecycle: 'visibility-unknown',
+      executionHostId: 'local'
+    })
+    expect(readStructuredAgentLaunchRecord('grok_session')?.surfaceAddress).toBeUndefined()
+    expect(readStructuredAgentLaunchRecord('bogus_session')).toBeUndefined()
+  })
+
   // This machine cannot re-derive a paired server's seed, so a reload must show the same one.
   it("keeps a paired server's reported seed across a reload, and no local one", () => {
     const intent = (

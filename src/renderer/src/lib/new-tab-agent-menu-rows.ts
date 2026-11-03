@@ -12,7 +12,9 @@ export type {
   NewTabAgentMenuSettings
 } from '../../../shared/agent-launch-picker-rows'
 
-export function hostChatAnswer(input: AgentLaunchRoutingInput): HostChatAnswer {
+export function hostChatAnswer(
+  input: Omit<AgentLaunchRoutingInput, 'agent'> & { agent: string }
+): HostChatAnswer {
   const support = structuredAgentLaunchSupport(input)
   if (support.supported) {
     return 'yes'

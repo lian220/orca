@@ -32,6 +32,7 @@ const registeredAgentSchema = z.object({
     threadGoal: capabilityFlag,
     contextUsage: capabilityFlag,
     imagePrompts: capabilityFlag,
+    concurrentSendPolicy: z.literal('reject').optional().catch(undefined),
     // Holding a follow-up until the turn ends never interrupts one the client cannot reason about.
     steering: openEnum(['inject', 'queue'] as const, 'queue')
       .optional()

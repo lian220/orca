@@ -1,3 +1,4 @@
+import { isTuiAgent } from './tui-agent-config'
 import { analyzeAgentChoiceArgs } from './agent-choice-args'
 import {
   agentPickerArgumentsKnown,
@@ -226,25 +227,25 @@ export function agentPickerEntriesFromRows(
   defaultAgent: TuiAgent | 'blank' | null | undefined
 ): AgentPickerEntry[] {
   // Why: rows are grouped by surface, so first appearance would rank every chat agent above every CLI one.
-  return orderAgentLaunchPickerAgents(defaultAgent, [...new Set(rows.map((row) => row.agent))]).map(
-    (agent) => {
-      const own = rows.filter((row) => row.agent === agent)
-      const chatDefault = own.some((row) => row.kind === 'chat')
-      const chat = chatDefault || own.some((row) => row.kind === 'cli' && row.chat)
-      return {
-        agent,
-        label: label(agent),
-        rows: own,
-        surfaces: [
-          ...(chat ? ['chat' as const] : []),
-          ...(detected.includes(agent) ? ['terminal' as const] : [])
-        ],
-        defaultSurface: chatDefault ? 'chat' : 'terminal',
-        ...seed(agent),
-        catalog: { origin: 'unknown' }
-      }
+  return orderAgentLaunchPickerAgents(defaultAgent, [
+    ...new Set(rows.map((row) => row.agent).filter(isTuiAgent))
+  ]).map((agent) => {
+    const own = rows.filter((row) => row.agent === agent)
+    const chatDefault = own.some((row) => row.kind === 'chat')
+    const chat = chatDefault || own.some((row) => row.kind === 'cli' && row.chat)
+    return {
+      agent,
+      label: label(agent),
+      rows: own,
+      surfaces: [
+        ...(chat ? ['chat' as const] : []),
+        ...(detected.includes(agent) ? ['terminal' as const] : [])
+      ],
+      defaultSurface: chatDefault ? 'chat' : 'terminal',
+      ...seed(agent),
+      catalog: { origin: 'unknown' }
     }
-  )
+  })
 }
 
 export function agentPickerHydrationQueue(

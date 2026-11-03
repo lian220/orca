@@ -7,7 +7,6 @@ import { findIndexedRepoOwner } from '../../repo-owner-index'
 import { folderWorkspaceToWorktree } from '../../../../../shared/folder-workspace-worktree'
 import type { Tab } from '../../../../../shared/tab-types'
 import type { ExecutionHostId } from '../../../../../shared/execution-host'
-import type { TuiAgent } from '../../../../../shared/tui-agent'
 import { defaultAgentChatLabel } from '../../../../../shared/agent-session/agent-session-chat-label'
 import { structuredAgentSessionTabId } from '../../../../../shared/agent-session/view/structured-agent-session-projection'
 import { useAppStore } from '@/store/index'
@@ -42,7 +41,7 @@ import { selectFolderWorkspaces } from '@/store/workspace-record-selectors'
 type LaunchSurface = {
   sessionId: string
   executionHostId: ExecutionHostId
-  agent: TuiAgent
+  agent: string
   surfaceAddress?: StructuredLaunchSurfaceAddress
 }
 
@@ -149,7 +148,7 @@ export function openStructuredAgentSessionProvisionalTab(args: {
   worktreeId: string
   executionHostId: ExecutionHostId
   sessionId: string
-  agent: TuiAgent
+  agent: string
   targetGroupId?: string
   /** The tab the chat opens right after, in that tab's group. */
   afterTabId?: string

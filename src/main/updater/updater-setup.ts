@@ -1,3 +1,4 @@
+import { usesMaintainedUpdates } from '../startup/maintained-build'
 import { app, powerMonitor } from 'electron'
 import type { BrowserWindow } from 'electron'
 import type { ReleaseBuild, ReleaseChannel } from '../../shared/release-channel'
@@ -39,18 +40,30 @@ export type UpdaterSetupOptions = {
 
 export class UpdaterSetup extends UpdaterDownloadInstall {
   checkForUpdates(): void {
+    if (usesMaintainedUpdates('', process.execPath)) {
+      return
+    }
     this.checkForUpdatesInBackground()
   }
 
   checkForUpdatesFromMenu(options?: UpdateCheckOptions): void {
+    if (usesMaintainedUpdates('', process.execPath)) {
+      return
+    }
     super.checkForUpdatesFromMenu(options)
   }
 
   downloadUpdate(): void {
+    if (usesMaintainedUpdates('', process.execPath)) {
+      return
+    }
     super.downloadUpdate()
   }
 
   quitAndInstall(): void {
+    if (usesMaintainedUpdates('', process.execPath)) {
+      return
+    }
     super.quitAndInstall()
   }
 
@@ -59,6 +72,9 @@ export class UpdaterSetup extends UpdaterDownloadInstall {
   }
 
   getUpdateStatus(): UpdateStatus {
+    if (usesMaintainedUpdates('', process.execPath)) {
+      return { state: 'idle' }
+    }
     return super.getUpdateStatus()
   }
 
@@ -137,7 +153,7 @@ export class UpdaterSetup extends UpdaterDownloadInstall {
       this.sendErrorStatus(`The server update did not complete: ${serveHandoffFailure}`, true)
     }
 
-    if (!app.isPackaged) {
+    if (!app.isPackaged || usesMaintainedUpdates('', process.execPath)) {
       return
     }
 

@@ -213,6 +213,7 @@ const FAILURE_SENTENCES = {
   emptyMessage: (_context, _fact, _surface, say) => say('emptyMessage'),
   commandUnavailable: namingAgent('commandUnavailable'),
   queueFull: (_context, _fact, _surface, say) => say('queueFull'),
+  sessionBusy: (_context, _fact, _surface, say) => say('sessionBusy'),
   writeFailed: (_context, _fact, _surface, say) => say('writeFailed'),
   cancelled: (_context, _fact, _surface, say) => say('cancelled'),
   chatClosed: (_context, _fact, _surface, say) => say('chatClosed'),

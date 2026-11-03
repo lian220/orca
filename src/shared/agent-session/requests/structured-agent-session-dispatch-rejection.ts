@@ -94,6 +94,7 @@ const KIND_CATEGORY = {
   commandUnavailable: 'content',
   commandRefused: 'content',
   queueFull: 'transport',
+  sessionBusy: 'undelivered',
   writeFailed: 'transport',
   hostFault: 'transport'
 } satisfies Record<SubmissionRejectionKind, DispatchRejectionCategory>
@@ -133,6 +134,7 @@ const KIND_VERDICT = {
   commandUnavailable: 'failure',
   commandRefused: 'failure',
   queueFull: 'failure',
+  sessionBusy: null,
   writeFailed: 'failure',
   hostFault: 'failure',
   // Orca stopped a start that hung: the agent failed.

@@ -4,7 +4,10 @@ import {
   type AgentPickerEntry,
   type AgentPickerDraft
 } from '../../../../shared/agent-launch-picker'
-import React, { useCallback, useRef } from 'react'
+import { isTuiAgent } from '../../../../shared/tui-agent-config'
+import { startStructuredAgentLaunch } from '@/lib/agent-session/launch/structured-agent-session-launch'
+import { captureStructuredLaunchSurfaceAddress } from '@/lib/agent-session/launch/structured-agent-session-launch-surface'
+import React, { useCallback } from 'react'
 import { toast } from 'sonner'
 import { launchAgentInNewTab } from '@/lib/launch-agent-in-new-tab'
 import { newAgentLaunchRequestId } from '@/lib/agent-launch-request-id'
@@ -12,7 +15,7 @@ import { captureNativeChatComposerFocusIntent } from '@/components/native-chat/u
 import { newAgentPromptOutcome } from '@/lib/new-agent-prompt-outcome'
 import { activeAgentNotesSendFailureMessage } from '@/lib/active-agent-note-send-result'
 import { Settings as SettingsIcon } from 'lucide-react'
-import { AgentSurfaceLaunchButton } from '@/components/agent/AgentSurfaceLaunchButton'
+import { SurfaceChoiceRow } from './SurfaceChoiceRow'
 import {
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -31,7 +34,13 @@ import { cn } from '@/lib/utils'
 import type { NewTabAgentMenuRow } from '@/lib/new-tab-agent-menu-rows'
 import { useNewTabAgentMenuRows, type NewTabAgentMenuModel } from './use-new-tab-agent-menu-rows'
 import { useAgentDetectionTargetForWorktree } from '@/hooks/useAgentDetectionTarget'
-import { chatUnavailableLabel, rowTitle, rowLabel, rowId } from './tab-agent-row-presentation'
+import {
+  chatUnavailableLabel,
+  rowTitle,
+  rowLabel,
+  rowId,
+  otherSurfaceRow
+} from './tab-agent-row-presentation'
 
 export type QuickLaunchAgentMenuItemsProps = {
   worktreeId: string
@@ -52,11 +61,9 @@ export type QuickLaunchAgentMenuItemsProps = {
   disabled?: boolean
 }
 
-const ROW_NAVIGATION_KEYS = new Set(['ArrowLeft', 'ArrowUp', 'ArrowDown', 'Home', 'End'])
-
 const PLACEHOLDER_WIDTHS = ['w-3/5', 'w-1/2', 'w-2/3', 'w-2/5', 'w-3/4', 'w-1/3', 'w-4/5', 'w-1/4']
 
-function getCatalogEntry(agent: TuiAgent): { id: TuiAgent; label: string } | null {
+function getCatalogEntry(agent: string): { id: TuiAgent; label: string } | null {
   return getAgentCatalog().find((a) => a.id === agent) ?? null
 }
 
@@ -83,6 +90,28 @@ export function useTabAgentMenuLaunch({
         return
       }
       const { agent } = row
+      if (!isTuiAgent(agent)) {
+        const result = startStructuredAgentLaunch(worktreeId, agent, {
+          requestId: newAgentLaunchRequestId(),
+          executionHostId: row.executionHostId,
+          surfaceAddress: captureStructuredLaunchSurfaceAddress(worktreeId, groupId),
+          prompt,
+          promptDelivery,
+          onPromptDelivered,
+          ...(onPromptHandedOff ? { promptKeptByCaller: true as const } : {})
+        })
+        if (onPromptHandedOff && result.promptDeliveryResult) {
+          onPromptHandedOff(newAgentPromptOutcome({ delivery: result.promptDeliveryResult }))
+        }
+        const failureMessage = translate(
+          'auto.components.tab.bar.QuickLaunchButton.chatUnavailableAfterSelection',
+          "Couldn't start a {{value0}} chat.",
+          { value0: agent }
+        )
+        void result.launchResult.catch(() => toast.error(failureMessage))
+        onFocusChat?.(`agent-session:${result.sessionId}`)
+        return
+      }
       const entry = getCatalogEntry(agent)
       const label = entry?.label ?? agent
       const result = launchAgentInNewTab({
@@ -251,7 +280,7 @@ export function ProjectedAgentMenuItems({
                   )}
         </DropdownMenuItem>
       ) : null}
-      {pickerInventory ? (
+      {pickerInventory && (
         <SubscribedAgentLaunchPickerMenu
           shortcutLabels={shortcutLabels}
           inventory={pickerInventory}
@@ -259,158 +288,63 @@ export function ProjectedAgentMenuItems({
           onSelectAgent={onSelectPickerAgent}
           hideSearch={hidePickerSearch}
         />
-      ) : (
-        rows.map((row, index) => {
-          const { agent } = row
-          const label = getCatalogEntry(agent)?.label ?? agent
-          // Chat rows come first; the rows that open a terminal start their own group.
-          const startsCliGroup = row.kind === 'cli' && index > 0 && rows[index - 1]?.kind !== 'cli'
-          if (row.kind === 'chat-unavailable') {
-            return (
-              <DropdownMenuItem key={rowId(row)} variant="launch" disabled>
-                <AgentIcon agent={agent} size={14} />
-                <span className="flex-1">{label}</span>
-                <span className="font-normal text-muted-foreground">
-                  {chatUnavailableLabel(row.reason)}
-                </span>
-              </DropdownMenuItem>
-            )
-          }
-          const showsDefaultAgentShortcut =
-            newAgentShortcut !== null && defaultAgent !== 'blank' && agent === defaultAgent
-          const rowContent = (
-            <>
-              <AgentIcon agent={agent} size={14} />
-              <span className="flex-1">{rowLabel(row)}</span>
-              {showsDefaultAgentShortcut ? (
-                <DropdownMenuShortcut>{newAgentShortcut}</DropdownMenuShortcut>
-              ) : null}
-            </>
-          )
-          const other = otherSurfaceRow(row, detectedIds)
-          return (
-            <React.Fragment key={rowId(row)}>
-              {startsCliGroup ? <DropdownMenuSeparator /> : null}
-              {other ? (
-                <SurfaceChoiceRow
-                  row={row}
-                  other={other}
-                  label={label}
-                  disabled={disabled}
-                  runLaunch={runLaunch}
-                >
-                  {rowContent}
-                </SurfaceChoiceRow>
-              ) : (
-                <DropdownMenuItem
-                  variant="launch"
-                  disabled={disabled}
-                  onSelect={() => runLaunch(row)}
-                  title={rowTitle(row, label)}
-                >
-                  {rowContent}
-                </DropdownMenuItem>
-              )}
-            </React.Fragment>
-          )
-        })
       )}
+      {(pickerInventory ? rows.filter((row) => !isTuiAgent(row.agent)) : rows).map((row, index) => {
+        const { agent } = row
+        const label = getCatalogEntry(agent)?.label ?? agent
+        // Chat rows come first; the rows that open a terminal start their own group.
+        const startsCliGroup = row.kind === 'cli' && index > 0 && rows[index - 1]?.kind !== 'cli'
+        if (row.kind === 'chat-unavailable') {
+          return (
+            <DropdownMenuItem key={rowId(row)} variant="launch" disabled>
+              <AgentIcon agent={isTuiAgent(agent) ? agent : undefined} size={14} />
+              <span className="flex-1">{label}</span>
+              <span className="font-normal text-muted-foreground">
+                {chatUnavailableLabel(row.reason)}
+              </span>
+            </DropdownMenuItem>
+          )
+        }
+        const showsDefaultAgentShortcut =
+          newAgentShortcut !== null && defaultAgent !== 'blank' && agent === defaultAgent
+        const rowContent = (
+          <>
+            <AgentIcon agent={isTuiAgent(agent) ? agent : undefined} size={14} />
+            <span className="flex-1">{rowLabel(row)}</span>
+            {showsDefaultAgentShortcut ? (
+              <DropdownMenuShortcut>{newAgentShortcut}</DropdownMenuShortcut>
+            ) : null}
+          </>
+        )
+        const other = otherSurfaceRow(row, detectedIds)
+        return (
+          <React.Fragment key={rowId(row)}>
+            {startsCliGroup ? <DropdownMenuSeparator /> : null}
+            {other ? (
+              <SurfaceChoiceRow
+                row={row}
+                other={other}
+                label={label}
+                disabled={disabled}
+                runLaunch={runLaunch}
+              >
+                {rowContent}
+              </SurfaceChoiceRow>
+            ) : (
+              <DropdownMenuItem
+                variant="launch"
+                disabled={disabled}
+                onSelect={() => runLaunch(row)}
+                title={rowTitle(row, label)}
+              >
+                {rowContent}
+              </DropdownMenuItem>
+            )}
+          </React.Fragment>
+        )
+      })}
       <AgentSettingsMenuItem onSelect={openAgentSettings} />
     </>
-  )
-}
-
-/** The same agent on the other surface: a chat's detected CLI, or a CLI-set agent's chat. */
-function otherSurfaceRow(
-  row: Exclude<NewTabAgentMenuRow, { kind: 'chat-unavailable' }>,
-  detectedIds: readonly TuiAgent[] | null
-): NewTabAgentMenuRow | null {
-  const { agent, executionHostId } = row
-  if (row.kind === 'chat') {
-    return detectedIds?.includes(agent) ? { kind: 'cli', agent, executionHostId } : null
-  }
-  return row.kind === 'cli' && row.chat ? { kind: 'chat', agent, executionHostId } : null
-}
-
-// Why: the row starts its own surface; its trailing button (or ArrowRight, then Enter) opens the other.
-function SurfaceChoiceRow({
-  row,
-  other,
-  label,
-  disabled,
-  runLaunch,
-  children
-}: {
-  row: NewTabAgentMenuRow
-  other: NewTabAgentMenuRow
-  label: string
-  disabled: boolean
-  runLaunch: (row: NewTabAgentMenuRow) => void
-  children: React.ReactNode
-}): React.JSX.Element {
-  const otherButton = useRef<HTMLButtonElement>(null)
-  const releaseTarget = useRef<{ event: PointerEvent; target: EventTarget } | null>(null)
-  const title = rowTitle(row, label)
-  return (
-    <DropdownMenuItem
-      variant="launch"
-      disabled={disabled}
-      title={title}
-      aria-label={title}
-      onPointerUp={(event) => {
-        // Radix synchronously clicks the row on drag release, discarding the release target.
-        const release = { event: event.nativeEvent, target: event.target }
-        releaseTarget.current = release
-        queueMicrotask(() => {
-          if (releaseTarget.current === release) {
-            releaseTarget.current = null
-          }
-        })
-      }}
-      onClick={(event) => {
-        const release = releaseTarget.current
-        releaseTarget.current = null
-        if (disabled) {
-          return
-        }
-        const target =
-          event.target === event.currentTarget && release && release.event.eventPhase !== Event.NONE
-            ? release.target
-            : event.target
-        runLaunch(target instanceof Node && otherButton.current?.contains(target) ? other : row)
-      }}
-      onKeyDown={(event) => {
-        if (event.key === 'ArrowRight') {
-          event.preventDefault()
-          otherButton.current?.focus()
-        }
-      }}
-    >
-      {children}
-      <AgentSurfaceLaunchButton
-        ref={otherButton}
-        surface={other.kind === 'chat' ? 'chat' : 'terminal'}
-        title={rowTitle(other, label)}
-        className="hover:bg-accent focus-visible:bg-accent [[data-highlighted]_&]:opacity-100"
-        onKeyDown={(event) => {
-          // Stopped so the row's own Enter handling does not start the row's surface instead.
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault()
-            event.stopPropagation()
-            event.currentTarget.click()
-          } else if (ROW_NAVIGATION_KEYS.has(event.key)) {
-            event.preventDefault()
-            event.stopPropagation()
-            const item = event.currentTarget.closest<HTMLElement>('[role="menuitem"]')
-            item?.focus()
-            // Why: roving focus ignores keys from inside an item, so the row replays the move.
-            if (event.key !== 'ArrowLeft') {
-              item?.dispatchEvent(new KeyboardEvent('keydown', { key: event.key, bubbles: true }))
-            }
-          }
-        }}
-      />
-    </DropdownMenuItem>
   )
 }
 

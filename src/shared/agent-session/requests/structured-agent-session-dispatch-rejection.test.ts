@@ -34,6 +34,7 @@ describe('classifyDispatchRejection', () => {
     ['hostStopped', 'undelivered', 'failure'],
     ['writeFailed', 'transport', 'failure'],
     ['queueFull', 'transport', 'failure'],
+    ['sessionBusy', 'undelivered', null],
     // The chat's state refused a queued command when its turn to run came.
     ['commandRefused', 'content', 'failure']
   ] as const)('reads the written %s rejection as %s, verdict %s', (kind, category, verdict) => {
