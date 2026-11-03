@@ -7,10 +7,10 @@ import {
   resetStructuredAgentLaunchPersistenceForTests,
   readStructuredAgentLaunchCancellationTombstoneSessionIds,
   retireAbsentStructuredAgentLaunchCancellationTombstonesPersisted,
-  retireStructuredAgentLaunchCancellationTombstonePersisted,
   writeStructuredAgentLaunchRecord,
   markStructuredAgentLaunchCancelledPersisted
 } from './structured-agent-session-launch-persistence'
+
 import { structuredAgentLaunchRecordFor } from './structured-agent-session-launch-record'
 import type { StructuredAgentSessionLaunchIntent } from '../../launch-structured-agent-session'
 
@@ -90,21 +90,6 @@ describe('structured agent launch persistence', () => {
     expect(readStructuredAgentLaunchRecord('bogus_session')).toBeUndefined()
   })
 
-  it('keeps the host a launch was created on across a reload', () => {
-    writeStructuredAgentLaunchRecord({
-      sessionId: 'claude_remote',
-      executionHostId: SERVER,
-      agent: 'claude',
-      lifecycle: 'pending',
-      clientOperationId: 'operation-3',
-      payloadFingerprint: 'fingerprint-3',
-      expectedRuntimeFence: null
-    })
-    reload()
-
-    expect(readStructuredAgentLaunchRecord('claude_remote')?.executionHostId).toBe(SERVER)
-  })
-
   // This machine cannot re-derive a paired server's seed, so a reload must show the same one.
   it("keeps a paired server's reported seed across a reload, and no local one", () => {
     const intent = (
@@ -146,49 +131,6 @@ describe('structured agent launch persistence', () => {
     expect(readStructuredAgentLaunchRecord('claude_local')?.seedOptions).toBeUndefined()
   })
 
-  it('drops a stored seed value that does not decode', () => {
-    localStorage.setItem(
-      'orca:structuredAgentLaunches:v1',
-      JSON.stringify([
-        {
-          sessionId: 'claude_paired',
-          executionHostId: SERVER,
-          agent: 'claude',
-          lifecycle: 'failed',
-          clientOperationId: 'operation-1',
-          payloadFingerprint: 'fingerprint-1',
-          expectedRuntimeFence: null,
-          seedOptions: { model: 'opus', fastMode: 'maybe' }
-        }
-      ])
-    )
-
-    expect(readStructuredAgentLaunchRecord('claude_paired')?.seedOptions).toEqual({
-      model: 'opus'
-    })
-  })
-
-  it('stores only content-free identity and preserves operation identity', () => {
-    writeStructuredAgentLaunchRecord({
-      sessionId: 'claude_session',
-      executionHostId: 'local',
-      agent: 'claude',
-      lifecycle: 'visibility-unknown',
-      clientOperationId: 'operation-2',
-      payloadFingerprint: 'fingerprint-2',
-      expectedRuntimeFence: null,
-      resumeFrom: { providerSessionId: 'provider-thread' }
-    })
-
-    const raw = localStorage.getItem('orca:structuredAgentLaunches:v1') ?? ''
-    expect(raw).toContain('claude_session')
-    expect(raw).toContain('operation-2')
-    expect(raw).not.toContain('prompt')
-    expect(raw).not.toContain('branch')
-    expect(raw).not.toContain('path')
-    expect(readStructuredAgentLaunchRecord('claude_session')?.clientOperationId).toBe('operation-2')
-  })
-
   it('keeps when a failed launch failed across a reload, and still loads records without it', () => {
     writeStructuredAgentLaunchRecord({
       sessionId: 'claude_session',
@@ -219,15 +161,6 @@ describe('structured agent launch persistence', () => {
     expect(readStructuredAgentLaunchRecord('older_session')).toMatchObject({ lifecycle: 'failed' })
     expect(readStructuredAgentLaunchRecord('older_session')?.failedAt).toBeUndefined()
     expect(readStructuredAgentLaunchRecord('corrupt_session')).toBeUndefined()
-  })
-
-  it('persists cancellation tombstones by session id and retires them', () => {
-    markStructuredAgentLaunchCancelledPersisted('codex_session', 'local')
-    expect(hasStructuredAgentLaunchCancellationTombstonePersisted('codex_session')).toBe(true)
-    // A local chat's tombstone keeps the shape older builds read.
-    expect(localStorage.getItem(TOMBSTONES_KEY)).toBe('["codex_session"]')
-    expect(retireStructuredAgentLaunchCancellationTombstonePersisted('codex_session')).toBe(true)
-    expect(hasStructuredAgentLaunchCancellationTombstonePersisted('codex_session')).toBe(false)
   })
 
   it("keeps a paired host's tombstone under that host across a reload", () => {

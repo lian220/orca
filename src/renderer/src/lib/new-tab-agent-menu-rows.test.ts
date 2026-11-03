@@ -4,7 +4,7 @@ import { buildNewTabAgentMenuRows } from './new-tab-agent-menu-rows'
 describe('external ACP chat rows', () => {
   it('offers host registered IDs without a matching terminal catalog entry', () => {
     const rows = buildNewTabAgentMenuRows({
-      settings: { experimentalNativeChat: true },
+      settings: {},
       detectedOnHost: [],
       chatAgents: [],
       externalChatAgents: ['team-agent'],
@@ -19,7 +19,7 @@ it.each(['subfolder', 'ssh', 'not-on-host'] as const)(
   'keeps external chat unavailable for %s',
   (reason) => {
     const rows = buildNewTabAgentMenuRows({
-      settings: { experimentalNativeChat: true },
+      settings: {},
       detectedOnHost: [],
       chatAgents: [],
       externalChatAgents: ['team-agent'],
@@ -33,11 +33,11 @@ it.each(['subfolder', 'ssh', 'not-on-host'] as const)(
 it('does not expose external ACP as a terminal when chat is disabled', () => {
   expect(
     buildNewTabAgentMenuRows({
-      settings: { experimentalNativeChat: false },
+      settings: {},
       detectedOnHost: [],
       chatAgents: [],
       externalChatAgents: ['team-agent'],
-      hostChatAnswer: () => 'yes',
+      hostChatAnswer: () => 'no-chats',
       chatProgram: () => 'missing'
     })
   ).toEqual([])

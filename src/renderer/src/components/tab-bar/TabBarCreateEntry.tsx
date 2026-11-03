@@ -1,4 +1,3 @@
-import { isTuiAgent } from '../../../../shared/tui-agent-config'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { useRuntimeFileListForWorktree } from '../quick-open-file-list'
@@ -7,7 +6,12 @@ import {
   getTabEntryOptions,
   isTabEntryAbsolutePathLike
 } from './tab-create-entry-action'
-import { findMatchingTabAgentLaunchOptions } from './tab-agent-launch-options'
+import {
+  launchTabAgentOption,
+  configuredAgentPickerLaunchOption,
+  findMatchingTabAgentLaunchOptions,
+  matchingAgentPickerLaunchOptions
+} from './tab-agent-launch-options'
 import { findMatchingTabCreateMenuOptions } from './tab-create-menu-options'
 import { getActiveOptionId, type ActiveOption } from './tab-create-entry-active-option'
 import {
@@ -43,6 +47,7 @@ export default function TabBarCreateEntry(props: TabBarCreateEntryProps): React.
 
 function TabBarCreateEntrySession({
   agentOptions = EMPTY_AGENT_OPTIONS,
+  agentPickerEntries,
   groupId,
   menuOpen,
   menuOptions = EMPTY_MENU_OPTIONS,
@@ -149,8 +154,11 @@ function TabBarCreateEntrySession({
     () =>
       terminalQueryMode
         ? EMPTY_AGENT_OPTIONS
-        : findMatchingTabAgentLaunchOptions(query, agentOptions),
-    [agentOptions, query, terminalQueryMode]
+        : [
+            ...matchingAgentPickerLaunchOptions(agentPickerEntries ?? [], query),
+            ...findMatchingTabAgentLaunchOptions(query, agentOptions)
+          ],
+    [agentOptions, agentPickerEntries, query, terminalQueryMode]
   )
 
   const disabled = !onOpenEntry
@@ -233,13 +241,7 @@ function TabBarCreateEntrySession({
       if (selectedOption.option.disabled) {
         return
       }
-      if (onLaunchAgentOption) {
-        onLaunchAgentOption(selectedOption.option)
-      } else {
-        if (isTuiAgent(selectedOption.option.agent)) {
-          onLaunchAgent?.(selectedOption.option.agent)
-        }
-      }
+      launchTabAgentOption(selectedOption.option, onLaunchAgentOption, onLaunchAgent)
       onDidOpenEntry?.()
       return
     }
@@ -380,6 +382,15 @@ function TabBarCreateEntrySession({
                 id={resultOptionDomId(index)}
                 option={option}
                 selected={index === activeSelectedIndex}
+                onUseAgent={
+                  option.kind === 'agent' && option.option.pickerEntry
+                    ? (draft) =>
+                        submitOption({
+                          kind: 'agent',
+                          option: configuredAgentPickerLaunchOption(option.option, draft)
+                        })
+                    : undefined
+                }
                 disabled={
                   disabled ||
                   pending ||

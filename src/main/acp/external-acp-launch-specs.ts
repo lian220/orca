@@ -17,6 +17,7 @@ function launchSpec(entry: ExternalAcpRegistration): AcpLaunchSpec {
   const identity = createHash('sha256').update(JSON.stringify(entry)).digest('hex').slice(0, 24)
   return {
     agent: entry.agent,
+    externalRegistration: true,
     ...(['hermes', 'team-agent'].includes(entry.agent)
       ? { resumeFailurePolicy: 'fail' as const, concurrentSendPolicy: 'reject' as const }
       : {}),

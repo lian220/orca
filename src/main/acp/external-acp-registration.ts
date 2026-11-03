@@ -1,6 +1,6 @@
 import { isAbsolute } from 'node:path'
 import { z } from 'zod'
-import { isStructuredAgentId } from '../../shared/agent-session-provider-handle-encoding'
+import { isStructuredAgentId } from '../../shared/agent-session/lifecycle/agent-session-provider-handle-encoding'
 
 const literal = z
   .string()

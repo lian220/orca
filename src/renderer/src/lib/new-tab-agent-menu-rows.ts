@@ -2,28 +2,15 @@ import {
   structuredAgentLaunchSupport,
   type AgentLaunchRoutingInput
 } from '@/lib/agent-launch-routing'
-import { STRUCTURED_AGENT_SESSION_REGISTERED_AGENTS_RUNTIME_CAPABILITY as CATALOG } from '../../../shared/protocol-version'
-import type { GlobalSettings } from '../../../shared/global-settings-types'
-import { isNativeChatProviderDisplayedOn } from '../../../shared/native-chat/native-chat-providers'
-import {
-  isNativeChatEnabled,
-  type NativeChatDefaultSettings
-} from '../../../shared/structured-native-chat-launch-route'
-import type { ExecutionHostId } from '../../../shared/execution-host'
-import type { TuiAgent } from '../../../shared/tui-agent'
-import { filterEnabledTuiAgents } from '../../../shared/tui-agent-selection'
-import { orderTabLaunchAgents as orderAgents } from '@/components/tab-bar/tab-agent-launch-options'
-import { chatProgramOffered, type ChatProgramObservation } from '@/lib/host-chat-program'
-
-/** What the workspace's machine says about opening an agent as a chat, installation aside. */
-export type HostChatAnswer =
-  | 'yes'
-  | 'not-yet-known'
-  | 'ssh'
-  | 'wsl'
-  | 'subfolder'
-  | 'not-on-host'
-  | 'no-chats'
+import { STRUCTURED_AGENT_SESSION_REGISTERED_AGENTS_RUNTIME_CAPABILITY as CATALOG } from '../../../shared/agent-session/structured-agent-session-surface-capabilities'
+import type { HostChatAnswer } from '../../../shared/agent-launch-picker-rows'
+export { buildNewTabAgentMenuRows } from '../../../shared/agent-launch-picker-rows'
+export type {
+  HostChatAnswer,
+  ChatUnavailableReason,
+  NewTabAgentMenuRow,
+  NewTabAgentMenuSettings
+} from '../../../shared/agent-launch-picker-rows'
 
 export function hostChatAnswer(
   input: Omit<AgentLaunchRoutingInput, 'agent'> & { agent: string }
@@ -51,115 +38,4 @@ export function hostChatAnswer(
     case 'reused-terminal':
       return 'yes'
   }
-}
-
-export type ChatUnavailableReason =
-  | 'check-failed'
-  | 'not-installed'
-  | 'ssh'
-  | 'wsl'
-  | 'subfolder'
-  | 'not-on-host'
-
-export type NewTabAgentMenuRow = (
-  | { kind: 'chat'; agent: string }
-  | { kind: 'chat-unavailable'; agent: string; reason: ChatUnavailableReason }
-  /** `chat`: set to open as a CLI, though it can open as a chat here too. */
-  | { kind: 'cli'; agent: TuiAgent; chat?: true }
-  | { kind: 'terminal'; agent: TuiAgent }
-) & { executionHostId?: ExecutionHostId }
-
-export type NewTabAgentMenuSettings = NativeChatDefaultSettings &
-  Partial<Pick<GlobalSettings, 'defaultTuiAgent' | 'disabledTuiAgents'>>
-
-export function buildNewTabAgentMenuRows(args: {
-  settings: NewTabAgentMenuSettings | null | undefined
-  detectedOnHost: readonly TuiAgent[] | null
-  externalChatAgents?: readonly string[]
-  chatAgents: readonly TuiAgent[]
-  hostChatAnswer: (agent: string) => HostChatAnswer
-  /** Whether the chat's own program runs there, which for some agents is not their CLI. */
-  chatProgram: (agent: TuiAgent) => ChatProgramObservation
-}): NewTabAgentMenuRow[] {
-  const { settings } = args
-  const defaultAgent = settings?.defaultTuiAgent
-  const installed = filterEnabledTuiAgents(args.detectedOnHost ?? [], settings?.disabledTuiAgents)
-  if (!isNativeChatEnabled(settings) || args.hostChatAnswer('claude') === 'no-chats') {
-    return orderAgents(defaultAgent, installed).map((agent) => ({ kind: 'terminal', agent }))
-  }
-  const runnable: TuiAgent[] = []
-  const unavailable = new Map<TuiAgent, ChatUnavailableReason>()
-  const chatAgents = filterEnabledTuiAgents(args.chatAgents, settings?.disabledTuiAgents)
-  // An unchosen provider is on wherever its chat program is, whether or not its CLI is.
-  const canOpen = (agent: TuiAgent): boolean =>
-    chatProgramOffered(args.chatProgram(agent)) ||
-    (args.chatProgram(agent) === 'unknown' && installed.includes(agent))
-  const providedHere = chatAgents.filter(canOpen)
-  const chatToo = new Set<TuiAgent>()
-  for (const agent of chatAgents) {
-    const displayed = isNativeChatProviderDisplayedOn(settings, agent, providedHere)
-    if (!displayed && (!installed.includes(agent) || !canOpen(agent))) {
-      continue
-    }
-    const answer = args.hostChatAnswer(agent)
-    if (!displayed) {
-      if (answer === 'yes') {
-        chatToo.add(agent)
-      }
-      continue
-    }
-    const program = args.chatProgram(agent)
-    if (answer === 'yes' && canOpen(agent)) {
-      runnable.push(agent)
-    } else {
-      unavailable.set(
-        agent,
-        answer === 'yes'
-          ? program === 'missing'
-            ? 'not-installed'
-            : 'check-failed'
-          : args.detectedOnHost === null
-            ? 'check-failed'
-            : answer === 'not-yet-known'
-              ? 'check-failed'
-              : answer === 'no-chats'
-                ? 'not-on-host'
-                : answer
-      )
-    }
-  }
-  const externalRows: NewTabAgentMenuRow[] = [...new Set(args.externalChatAgents ?? [])].map(
-    (agent) => {
-      const answer = args.hostChatAnswer(agent)
-      return answer === 'yes'
-        ? { kind: 'chat', agent }
-        : {
-            kind: 'chat-unavailable',
-            agent,
-            reason:
-              answer === 'not-yet-known'
-                ? 'check-failed'
-                : answer === 'no-chats'
-                  ? 'not-on-host'
-                  : answer
-          }
-    }
-  )
-  return [
-    ...externalRows,
-    ...orderAgents(defaultAgent, runnable).map((agent) => ({ kind: 'chat' as const, agent })),
-    ...orderAgents(defaultAgent, [...unavailable.keys()]).map((agent) => ({
-      kind: 'chat-unavailable' as const,
-      agent,
-      reason: unavailable.get(agent) ?? 'not-on-host'
-    })),
-    ...orderAgents(
-      defaultAgent,
-      installed.filter((agent) => !runnable.includes(agent))
-    ).map((agent) => ({
-      kind: 'cli' as const,
-      agent,
-      ...(chatToo.has(agent) ? { chat: true as const } : {})
-    }))
-  ]
 }

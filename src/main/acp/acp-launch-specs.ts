@@ -10,7 +10,7 @@ import { directoryAccountBinding, type AcpAccountBinding } from './acp-account-b
 import { openCodeAcpAccountBinding } from '../opencode/opencode-structured-account-home'
 import { scrubOpenCodeAcpEnvironment } from '../opencode/opencode-acp-environment'
 import { readExternalAcpLaunchSpecs } from './external-acp-launch-specs'
-import type { AgentSessionModelOption } from '../../shared/agent-session-wire'
+import type { AgentSessionModelOption } from '../../shared/agent-session/agent-session-wire'
 import type { AgentChatPermissionMode } from '../../shared/agent-chat-permission-mode'
 import type { InitializeResponse } from './generated/acp-protocol.generated'
 import { compareAppVersions } from '../../shared/app-version'
@@ -20,7 +20,7 @@ import {
   OPENCODE_MODEL_LISTING_ARGS,
   parseOpenCodeModelListing
 } from '../opencode/opencode-model-catalog-listing'
-import { agentSessionSignInFor } from '../../shared/agent-session-sign-in'
+import { agentSessionSignInFor } from '../../shared/agent-session/lifecycle/agent-session-sign-in'
 import {
   loadGrokVisualsSkill,
   loadOmpVisualsSkill,
@@ -95,6 +95,7 @@ export function acpListingNeedsChatFolder(discovery: AcpModelDiscovery): boolean
 
 export type AcpLaunchSpec = {
   agent: string
+  externalRegistration?: true
   command: string
   /** The terminal agent's Command setting may name a different program than this chat server. */
   ignoreAgentCommandSetting?: true
@@ -126,7 +127,7 @@ export type AcpLaunchSpec = {
   /** Enables /compact as a prompt command. */
   compaction?: true
   /** Rejects copy arguments that route the CLI away from the copy's store. */
-  assertCopyLaunchArgs?: (args: readonly string[]) => void
+  assertCopyLaunchArgs?: (args: readonly string[], prefixArgs?: readonly string[]) => void
   /** How the agent names each turn its reopen replays, when a reopened chat catches up on the
    *  turns made outside it; absent, the replay is only dropped. */
   historyCatchUp?: AcpHistoryTurnIdentity

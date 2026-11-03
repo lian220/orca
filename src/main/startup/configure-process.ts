@@ -1,5 +1,6 @@
 import { maintainedProfilePath } from './maintained-build'
 import { app } from 'electron'
+import { guardExternalOpensInE2E } from './e2e-external-open-guard'
 import { quitProcess } from './process-quit-request'
 import { existsSync, mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -199,6 +200,7 @@ export function configureDevUserDataPath(isDev: boolean): void {
     mkdirSync(e2eHomeDir, { recursive: true, mode: 0o700 })
     app.setPath('home', e2eHomeDir)
     app.setPath('userData', e2eConfig.userDataDir)
+    guardExternalOpensInE2E()
     return
   }
 

@@ -35,6 +35,7 @@ export function acpStructuredAgentDefinition(spec: AcpLaunchSpec): StructuredAge
         : {}),
       approvalEnforcement: 'orca'
     },
+    ...(spec.externalRegistration && { managedRuntime: () => true }),
     ...(managedRuntime && { managedRuntime: () => managedRuntime.pin() !== null }),
     restingOptions: {
       acceptsKey: isAcpStructuredOptionKey,
