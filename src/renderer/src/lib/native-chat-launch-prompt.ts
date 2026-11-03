@@ -1,6 +1,8 @@
+import type { TuiAgent } from '../../../shared/tui-agent'
+
 export type NativeChatLaunchPrompt = {
   tabId: string
-  agent: string
+  agent: TuiAgent
   text: string
   createdAt: number
   failed?: boolean
@@ -9,7 +11,7 @@ export type NativeChatLaunchPrompt = {
 /** Keep unsent launch context as a composer draft so TUI-prefilled linked context remains visible in chat. */
 export type NativeChatLaunchDraft = {
   tabId: string
-  agent: string
+  agent: TuiAgent
   text: string
   createdAt: number
   /** Set once a composer copied the text into its draft; blocks re-adoption after the user clears it. */

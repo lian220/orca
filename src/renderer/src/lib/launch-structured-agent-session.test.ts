@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { structuredAgentSessionPayloadFingerprint } from '../../../shared/structured-agent-session-mutation'
+import { structuredAgentSessionPayloadFingerprint } from '../../../shared/agent-session/lifecycle/structured-agent-session-mutation'
 import { callStructuredAgentSession } from '@/runtime/structured-agent-session-client'
 import { useAppStore } from '@/store'
 import {
@@ -11,7 +11,7 @@ import {
   StructuredAgentSessionCreateUnknownOutcomeError,
   StructuredAgentSessionOwnerUnresolvedError
 } from './launch-structured-agent-session'
-import { admitStructuredLaunchOnHost } from './structured-agent-session-host-admission'
+import { admitStructuredLaunchOnHost } from './agent-session/launch/structured-agent-session-host-admission'
 import {
   clearWebSessionFocusIntent,
   peekWebSessionFocusIntent
@@ -81,66 +81,67 @@ describe('structured agent session launch', () => {
     ).toBe(false)
   })
 
-  it.each(['codex', 'team-agent'])(
-    'creates %s with a host-verifiable launch intent',
-    async (agent) => {
-      vi.mocked(callStructuredAgentSession).mockImplementation(async (_target, method, params) =>
-        method === 'agentSession.createSupport'
-          ? { supported: true }
-          : {
-              ok: true,
-              replayed: false,
+  it('creates a native session with a host-verifiable launch intent', async () => {
+    vi.mocked(callStructuredAgentSession).mockImplementation(async (_target, method, params) =>
+      method === 'agentSession.createSupport'
+        ? { supported: true }
+        : {
+            ok: true,
+            replayed: false,
+            fence: 1,
+            cursor: { epoch: 'epoch-1', sequence: 0 },
+            value: {
+              sessionId: (params as { envelope: { sessionId: string } }).envelope.sessionId,
               fence: 1,
-              cursor: { epoch: 'epoch-1', sequence: 0 },
-              value: {
-                sessionId: (params as { envelope: { sessionId: string } }).envelope.sessionId,
-                fence: 1,
-                page: {
-                  sessionId: 'session-1',
-                  epoch: 'epoch-1',
-                  direction: 'tail',
-                  items: [],
-                  removedItemIds: [],
-                  submissions: [],
-                  window: {
-                    oldest: null,
-                    newest: null,
-                    nextCursor: { epoch: 'epoch-1', sequence: 0 }
-                  },
-                  liveCursor: { epoch: 'epoch-1', sequence: 0 },
-                  hasOlder: false,
-                  hasNewer: false
+              page: {
+                sessionId: 'session-1',
+                epoch: 'epoch-1',
+                direction: 'tail',
+                items: [],
+                removedItemIds: [],
+                submissions: [],
+                window: {
+                  oldest: null,
+                  newest: null,
+                  nextCursor: { epoch: 'epoch-1', sequence: 0 }
                 },
-                unconfirmedClientMessageIds: []
-              }
+                liveCursor: { epoch: 'epoch-1', sequence: 0 },
+                hasOlder: false,
+                hasNewer: false
+              },
+              unconfirmedClientMessageIds: []
             }
-      )
+          }
+    )
 
-      const intent = createStructuredAgentSessionLaunchIntent('workspace-1', agent)
-      const receipt = await launchStructuredAgentSession(intent)
-      const params = vi
-        .mocked(callStructuredAgentSession)
-        .mock.calls.find(([, method]) => method === 'agentSession.create')?.[2]
-
-      expect(receipt).toEqual({
-        sessionId: expect.stringMatching(new RegExp(`^${agent}_[A-Za-z0-9_]{36}$`)),
-        fence: 1
-      })
-      expect(callStructuredAgentSession).toHaveBeenCalledWith(
-        { kind: 'local' },
-        'agentSession.create',
-        expect.objectContaining({ worktree: 'id:workspace-1', agent })
-      )
-      expect(intent.params.envelope.payloadFingerprint).toBe(
-        structuredAgentSessionPayloadFingerprint({
-          method: 'agentSession.create',
-          sessionId: intent.params.envelope.sessionId,
-          fields: { worktree: 'id:workspace-1', agent }
-        })
-      )
-      expect(params).toBe(intent.params)
+    const intent = createStructuredAgentSessionLaunchIntent('workspace-1', 'codex')
+    const receipt = await launchStructuredAgentSession(intent)
+    const params = vi
+      .mocked(callStructuredAgentSession)
+      .mock.calls.find(([, method]) => method === 'agentSession.create')?.[2] as {
+      envelope: { sessionId: string; payloadFingerprint: string }
+      worktree: string
+      agent: 'codex'
     }
-  )
+
+    expect(receipt).toEqual({
+      sessionId: expect.stringMatching(/^codex_[A-Za-z0-9_]{36}$/),
+      fence: 1
+    })
+    expect(callStructuredAgentSession).toHaveBeenCalledWith(
+      { kind: 'local' },
+      'agentSession.create',
+      expect.objectContaining({ worktree: 'id:workspace-1', agent: 'codex' })
+    )
+    expect(params.envelope.payloadFingerprint).toBe(
+      structuredAgentSessionPayloadFingerprint({
+        method: 'agentSession.create',
+        sessionId: params.envelope.sessionId,
+        fields: { worktree: 'id:workspace-1', agent: 'codex' }
+      })
+    )
+    expect(params).toBe(intent.params)
+  })
 
   it('creates the session on the paired server that owns the workspace', async () => {
     const initial = useAppStore.getState()

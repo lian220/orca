@@ -1,6 +1,5 @@
 import type { AcpHistoryTurnIdentity } from './acp-history-replay'
 import { join } from 'node:path'
-import { homedir } from 'node:os'
 import type { AcpDialect } from './acp-dialects/acp-dialect'
 import { GROK_ACP_DIALECT } from './acp-dialects/grok-dialect'
 import { OMP_ACP_DIALECT } from './acp-dialects/omp-dialect'
@@ -9,8 +8,8 @@ import { ANTIGRAVITY_ACP_DIALECT } from './acp-dialects/antigravity-dialect'
 import { directoryAccountBinding, type AcpAccountBinding } from './acp-account-binding'
 import { openCodeAcpAccountBinding } from '../opencode/opencode-structured-account-home'
 import { scrubOpenCodeAcpEnvironment } from '../opencode/opencode-acp-environment'
-import { readExternalAcpLaunchSpecs } from './external-acp-launch-specs'
-import type { AgentSessionModelOption } from '../../shared/agent-session-wire'
+import type { TuiAgent } from '../../shared/tui-agent'
+import type { AgentSessionModelOption } from '../../shared/agent-session/agent-session-wire'
 import type { AgentChatPermissionMode } from '../../shared/agent-chat-permission-mode'
 import type { InitializeResponse } from './generated/acp-protocol.generated'
 import { compareAppVersions } from '../../shared/app-version'
@@ -20,7 +19,7 @@ import {
   OPENCODE_MODEL_LISTING_ARGS,
   parseOpenCodeModelListing
 } from '../opencode/opencode-model-catalog-listing'
-import { agentSessionSignInFor } from '../../shared/agent-session-sign-in'
+import { agentSessionSignInFor } from '../../shared/agent-session/lifecycle/agent-session-sign-in'
 import {
   loadGrokVisualsSkill,
   loadOmpVisualsSkill,
@@ -94,7 +93,7 @@ export function acpListingNeedsChatFolder(discovery: AcpModelDiscovery): boolean
 }
 
 export type AcpLaunchSpec = {
-  agent: string
+  agent: TuiAgent
   command: string
   /** The terminal agent's Command setting may name a different program than this chat server. */
   ignoreAgentCommandSetting?: true
@@ -126,7 +125,7 @@ export type AcpLaunchSpec = {
   /** Enables /compact as a prompt command. */
   compaction?: true
   /** Rejects copy arguments that route the CLI away from the copy's store. */
-  assertCopyLaunchArgs?: (args: readonly string[]) => void
+  assertCopyLaunchArgs?: (args: readonly string[], prefixArgs?: readonly string[]) => void
   /** How the agent names each turn its reopen replays, when a reopened chat catches up on the
    *  turns made outside it; absent, the replay is only dropped. */
   historyCatchUp?: AcpHistoryTurnIdentity
@@ -138,10 +137,6 @@ export type AcpLaunchSpec = {
   privateTempDirectory?: true
   /** Prefer session/resume even when loading is supported. */
   resumePreference?: 'resume'
-  /** Keep the original provider conversation when reopening fails. */
-  resumeFailurePolicy?: 'fail'
-  /** Refuse unsolicited simultaneous sends instead of cancelling the active turn. */
-  concurrentSendPolicy?: 'reject'
   launchGate?: AcpLaunchGate
 }
 
@@ -299,25 +294,12 @@ export const ANTIGRAVITY_LAUNCH_SPEC = {
   launchGate: ANTIGRAVITY_LAUNCH_GATE
 } satisfies AcpLaunchSpec
 
-const BUILTIN_ACP_LAUNCH_SPECS: readonly AcpLaunchSpec[] = [
+export const ACP_LAUNCH_SPECS: readonly AcpLaunchSpec[] = [
   GROK_LAUNCH_SPEC,
   OPENCODE_LAUNCH_SPEC,
   OPENCODE2_LAUNCH_SPEC,
   OMP_LAUNCH_SPEC,
   ANTIGRAVITY_LAUNCH_SPEC
-]
-
-const external = readExternalAcpLaunchSpecs(
-  process.env.ORCA_EXTERNAL_ACP_CONFIG,
-  ['pi', 'claude', 'codex', ...BUILTIN_ACP_LAUNCH_SPECS.map((spec) => spec.agent)],
-  join(homedir(), '.config', 'orca', 'external-acp.json')
-)
-if (!external.ok) {
-  console.warn('[acp] External registration rejected; built-in agents remain available.')
-}
-export const ACP_LAUNCH_SPECS: readonly AcpLaunchSpec[] = [
-  ...BUILTIN_ACP_LAUNCH_SPECS,
-  ...(external.ok ? external.specs : [])
 ]
 
 export function acpLaunchSpecFor(agent: string): AcpLaunchSpec | null {

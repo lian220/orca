@@ -1,5 +1,5 @@
-import { maintainedProfilePath } from './maintained-build'
 import { app } from 'electron'
+import { guardExternalOpensInE2E } from './e2e-external-open-guard'
 import { quitProcess } from './process-quit-request'
 import { existsSync, mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -199,19 +199,10 @@ export function configureDevUserDataPath(isDev: boolean): void {
     mkdirSync(e2eHomeDir, { recursive: true, mode: 0o700 })
     app.setPath('home', e2eHomeDir)
     app.setPath('userData', e2eConfig.userDataDir)
+    guardExternalOpensInE2E()
     return
   }
 
-  const maintainedProfile = maintainedProfilePath(
-    '',
-    app.getPath('appData'),
-    process.execPath,
-    process.env.ORCA_MAINTAINED_VERIFICATION_PROFILE
-  )
-  if (maintainedProfile) {
-    app.setPath('userData', maintainedProfile)
-    return
-  }
   if (!isDev) {
     return
   }

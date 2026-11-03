@@ -1,5 +1,6 @@
+import { structuredAgentSessionSendBody } from '../../../../shared/agent-session/requests/structured-agent-session-send-mutation'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AgentJournalSubmission } from '../../../../shared/agent-session-journal-types'
+import type { AgentJournalSubmission } from '../../../../shared/agent-session/journal/agent-session-journal-types'
 
 const mocks = vi.hoisted(() => ({
   call: vi.fn(),
@@ -103,25 +104,6 @@ function phases(): string[] {
 }
 
 describe('structured agent session message sender', () => {
-  it('hands the second UI draft back when the owner refuses an active turn', async () => {
-    const calls = deferredCalls()
-    const sending = send('keep this second UI draft', {
-      target: { kind: 'environment', environmentId: 'lian-owner' }
-    })
-    await flush()
-    calls[0].resolve({
-      ok: false,
-      refusal: {
-        code: 'agent_session_operation_invalid',
-        details: { reason: 'turnActive' },
-        message: 'The agent is still working. This message was not sent.'
-      }
-    })
-    expect(await sending.outcome).toBe('returned')
-    expect(mocks.handBack).toHaveBeenCalledOnce()
-    expect(sendCalls()).toBe(1)
-  })
-
   beforeEach(() => {
     vi.useFakeTimers()
     mocks.call.mockReset()
@@ -190,8 +172,13 @@ describe('structured agent session message sender', () => {
     ]
   ] as const)('frees the chat for the next send once its send is %s', async (_how, end) => {
     const calls = deferredCalls()
-    const a = send('a')
+    const a = send('/fast', { attachments: [{ path: '/shot.png', previewUri: '/shot.png' }] })
     await flush()
+    expect(mocks.call.mock.calls[0][2]).toMatchObject({
+      body: structuredAgentSessionSendBody('/fast', [
+        { path: '/shot.png', previewUri: '/shot.png' }
+      ])
+    })
     expect(structuredAgentSessionSendOut(SESSION)).toBe(true)
     await end(calls, a.clientMessageId)
     await a.outcome
@@ -444,7 +431,9 @@ describe('structured agent session message sender', () => {
 
   it('never probes a host-recorded unknown, and sends what follows it', async () => {
     const calls = deferredCalls()
-    const a = send('a')
+    const a = send('/permissions', {
+      attachments: [{ path: '/shot.png', previewUri: '/shot.png' }]
+    })
     await flush()
     // The agent died with the message on its way: the host recorded it and can't tell.
     settleStructuredAgentSessionSendsFromJournal(

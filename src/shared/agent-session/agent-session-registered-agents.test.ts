@@ -15,15 +15,6 @@ const CODEX = {
 }
 
 describe('decodeAgentSessionAgentsResult', () => {
-  it('preserves a host busy policy without changing legacy steering', () => {
-    const hermes = {
-      ...CODEX,
-      agent: 'hermes',
-      capabilities: { ...CODEX.capabilities, concurrentSendPolicy: 'reject' }
-    }
-    expect(decodeAgentSessionAgentsResult({ agents: [hermes] })).toEqual([hermes])
-  })
-
   it('reads every well-formed agent', () => {
     expect(decodeAgentSessionAgentsResult({ agents: [CODEX] })).toEqual([CODEX])
   })

@@ -2,8 +2,9 @@
 
 import type { ExecutionHostId } from '../../../shared/execution-host'
 import type { Tab } from '../../../shared/tab-types'
+import type { TuiAgent } from '../../../shared/tui-agent'
 import { defaultAgentChatLabel } from '../../../shared/agent-session/agent-session-chat-label'
-import { structuredAgentSessionTabId } from '../../../shared/structured-agent-session-projection'
+import { structuredAgentSessionTabId } from '../../../shared/agent-session/view/structured-agent-session-projection'
 import { useAppStore } from '@/store'
 import { openContentTabThroughLayoutOwner } from '@/runtime/layout-owner-content-tab-open'
 import { hasPendingEntityTab } from '@/runtime/layout-owner-pending-tabs'
@@ -13,7 +14,7 @@ export type AgentSessionTabOpen = {
   worktreeId: string
   executionHostId: ExecutionHostId
   sessionId: string
-  agent: string
+  agent: TuiAgent
   targetGroupId?: string
   afterTabId?: string
   activate: boolean

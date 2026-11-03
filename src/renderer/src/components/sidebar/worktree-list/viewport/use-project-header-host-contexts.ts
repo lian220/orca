@@ -21,7 +21,6 @@ function createProjectHeaderHostContextsSelector(args: ContextArgs) {
     inputs = nextInputs
     const next = getProjectHeaderHostContexts({
       ...args,
-      showSingleHostLabels: true,
       runtimeEnvironments: state.runtimeEnvironments,
       sshConnectionStates: state.sshConnectionStates
     })

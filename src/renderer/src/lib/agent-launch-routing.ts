@@ -1,6 +1,6 @@
 import type { ProjectExecutionRuntimeResolution } from '../../../shared/project-execution-runtime'
 import {
-  isNativeChatDefaultFor,
+  nativeChatPreferenceFor,
   resolveStructuredNativeChatSupport,
   type NativeChatDefaultSettings,
   type StructuredNativeChatBlocker
@@ -31,22 +31,20 @@ export type AgentLaunchRoutingInput = {
 }
 
 export function resolveAgentLaunchRoute(input: AgentLaunchRoutingInput): AgentLaunchRoute {
-  return isNativeChatDefaultFor(input.settings, input.agent) &&
+  return nativeChatPreferenceFor(input.settings, input.agent) &&
     structuredAgentLaunchSupported(input)
     ? 'structured-native-chat'
     : 'terminal-tui'
 }
 
-// Explicit chat requests (resume history in a new chat) do not depend on the Chat UI switch.
+// Explicit chat requests (resume history in a new chat) do not depend on the agent's Chat | CLI choice.
 export function structuredAgentLaunchSupported(
   input: Omit<AgentLaunchRoutingInput, 'launchText'>
 ): boolean {
   return structuredAgentLaunchSupport(input).supported
 }
 
-export function structuredAgentLaunchSupport(
-  input: Omit<AgentLaunchRoutingInput, 'launchText' | 'agent'> & { agent: string }
-) {
+export function structuredAgentLaunchSupport(input: Omit<AgentLaunchRoutingInput, 'launchText'>) {
   return resolveStructuredNativeChatSupport({
     agent: input.agent,
     executionHostId: input.executionHostId,
@@ -65,7 +63,7 @@ export function structuredAgentLaunchDowngrade(
   input: AgentLaunchRoutingInput,
   route: AgentLaunchRoute
 ): StructuredNativeChatBlocker | null {
-  if (route === 'structured-native-chat' || !isNativeChatDefaultFor(input.settings, input.agent)) {
+  if (route === 'structured-native-chat' || !nativeChatPreferenceFor(input.settings, input.agent)) {
     return null
   }
   const support = structuredAgentLaunchSupport(input)

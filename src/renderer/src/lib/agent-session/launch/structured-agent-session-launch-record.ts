@@ -1,9 +1,10 @@
-import { isStructuredAgentId } from '../../../../../shared/agent-session-provider-handle'
+import { isTuiAgent } from '../../../../../shared/tui-agent-config'
+import type { TuiAgent } from '../../../../../shared/tui-agent'
 import type {
   StructuredAgentSessionFirstMessage,
   StructuredAgentSessionResumeSource
-} from '../../../../../shared/structured-agent-session-create'
-import { isAgentSessionOptions } from '../../../../../shared/agent-session-record'
+} from '../../../../../shared/agent-session/structured-agent-session-create'
+import { isAgentSessionOptions } from '../../../../../shared/agent-session/lifecycle/agent-session-record'
 import { SendBodyStructure } from '../../../../../shared/rpc-contract/structured-agent-session-message-params'
 import { parseExecutionHostId, type ExecutionHostId } from '../../../../../shared/execution-host'
 import type { StructuredAgentSessionLaunchIntent } from '../../launch-structured-agent-session'
@@ -46,7 +47,7 @@ export type StructuredAgentLaunchPersistedRecord = {
   sessionId: string
   // Older records lack host because chats could only launch locally then; restore them as local.
   executionHostId: ExecutionHostId
-  agent: string
+  agent: TuiAgent
   lifecycle: StructuredAgentLaunchPersistedLifecycle
   clientOperationId: string
   payloadFingerprint: string
@@ -133,7 +134,7 @@ export function validRecord(value: unknown): value is Omit<
       (typeof executionHostId === 'string' && parseExecutionHostId(executionHostId) !== null)) &&
     typeof sessionId === 'string' &&
     sessionId.length > 0 &&
-    isStructuredAgentId(agent) &&
+    isTuiAgent(agent) &&
     (lifecycle === 'pending' || lifecycle === 'visibility-unknown' || lifecycle === 'failed') &&
     typeof clientOperationId === 'string' &&
     typeof payloadFingerprint === 'string' &&

@@ -1,4 +1,3 @@
-import { isTuiAgent } from '../../../../shared/tui-agent-config'
 import React, { useState } from 'react'
 import { CommandItem, CommandSeparator } from '@/components/ui/command'
 import { AgentIcon, getAgentCatalog, type AgentCatalogEntry } from '@/lib/agent-catalog'
@@ -90,7 +89,6 @@ export function surfaceRowValue(
 /** A chat row's terminal button runs the agent's CLI, so only a detected CLI gets one. */
 const rowOffersTerminal = (model?: NewTabAgentMenuModel, row?: NewTabAgentMenuRow): boolean =>
   row?.kind === 'chat' &&
-  isTuiAgent(row.agent) &&
   model?.state === 'settled' &&
   model.detection.detectedIds?.includes(row.agent) === true
 
@@ -116,7 +114,7 @@ export function useSurfaceRowArming(
     if (event.key === 'ArrowRight' && rowOffersTerminal(interaction.model, row) && caretAtEnd) {
       event.preventDefault()
       setArmed(commandValue)
-    } else if (event.key === 'Enter' && armedValue !== null && row && isTuiAgent(row.agent)) {
+    } else if (event.key === 'Enter' && armedValue !== null && row) {
       // Stopped so cmdk does not also select the row and start a chat.
       event.preventDefault()
       pick(row.agent, 'terminal')
@@ -167,10 +165,6 @@ export function SurfaceAgentItems({
   const pickedValue = surfaceRowValue(rows, value)
   const terminalPicked = surfaceRows.selection.cli
   return rows.map((row, index) => {
-    const agent = row.agent
-    if (!isTuiAgent(agent)) {
-      return null
-    }
     const id = rowId(row)
     const label = rowLabel(row)
     const startsCliGroup = row.kind === 'cli' && index > 0 && rows[index - 1]?.kind !== 'cli'
@@ -185,9 +179,9 @@ export function SurfaceAgentItems({
           itemValue: unavailable ? `unavailable:${row.agent}` : id,
           isChecked: id === pickedValue,
           isDefault: defaultAgent === row.agent,
-          onSelect: () => onPick(agent, row.kind === 'chat' ? 'chat' : 'terminal'),
-          onSetDefault: onSetDefault && !unavailable ? () => onSetDefault(agent) : undefined,
-          icon: <AgentIcon agent={agent} />,
+          onSelect: () => onPick(row.agent, row.kind === 'chat' ? 'chat' : 'terminal'),
+          onSetDefault: onSetDefault && !unavailable ? () => onSetDefault(row.agent) : undefined,
+          icon: <AgentIcon agent={row.agent} />,
           label,
           disabled: unavailable,
           title: unavailable
@@ -212,7 +206,7 @@ export function SurfaceAgentItems({
               onMouseDown={(event) => event.preventDefault()}
               onClick={(event) => {
                 event.stopPropagation()
-                onPick(agent, 'terminal')
+                onPick(row.agent, 'terminal')
               }}
             />
           ) : null

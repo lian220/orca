@@ -6,7 +6,7 @@ import {
   type AgentSessionFailureCopyId,
   type AgentSessionFailureCopyValues,
   type AgentSessionFailureSay
-} from '../../../../shared/agent-session-failure-copy'
+} from '../../../../shared/agent-session/failures/agent-session-failure-copy'
 import { AVAILABILITY_PIECES } from './agent-session-availability-words-text'
 import { ATTACHMENT_FAILURE_PIECES } from './agent-session-failure-attachment-words-text'
 import { STOP_FAILURE_PIECES } from './agent-session-failure-stop-words-text'
@@ -215,8 +215,6 @@ const PIECES: Record<AgentSessionFailureCopyId, (values: AgentSessionFailureCopy
         COPY.commandUnavailable,
         values
       ),
-    sessionBusy: () =>
-      translate('components.native-chat.failureWords.sessionBusy', COPY.sessionBusy),
     queueFull: () => translate('components.native-chat.failureWords.queueFull', COPY.queueFull),
     writeFailed: () =>
       translate('components.native-chat.failureWords.writeFailed', COPY.writeFailed),
@@ -293,6 +291,12 @@ const PIECES: Record<AgentSessionFailureCopyId, (values: AgentSessionFailureCopy
       translate(
         'components.native-chat.failureWords.previousExitUnverifiable',
         COPY.previousExitUnverifiable,
+        values
+      ),
+    sessionNotRestored: (values) =>
+      translate(
+        'components.native-chat.failureWords.sessionNotRestored',
+        COPY.sessionNotRestored,
         values
       )
   }
