@@ -56,6 +56,7 @@ export const AGENT_SESSION_FAILURE_KINDS = [
   /** One of the agent's own commands that its chats do not run, sent as a whole message. */
   'commandUnavailable',
   'queueFull',
+  'sessionBusy',
   'writeFailed',
   'cancelled',
   'chatClosed',

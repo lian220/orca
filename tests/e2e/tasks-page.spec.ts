@@ -392,6 +392,9 @@ test.describe('Tasks page', () => {
   test('GitHub search waits for idle, keeps rows visible, and Enter does not double-fetch', async ({
     orcaPage
   }) => {
+    await orcaPage.evaluate(() =>
+      window.__store!.getState().updateSettingsOrThrow({ uiLanguage: 'en' })
+    )
     await openInstrumentedGitHubTasksPage(orcaPage)
 
     const input = orcaPage.getByPlaceholder('Search GitHub issues...')
@@ -427,6 +430,7 @@ test.describe('Tasks page', () => {
         timeout: TASK_SEARCH_PROBE_TIMEOUT_MS
       })
       .toEqual({ countQueries: ['is:issue ratex'], fetchQueries: ['is:issue ratex'] })
+    await input.press('Enter')
     await orcaPage.waitForTimeout(TASK_SEARCH_SETTLE_MS)
     expect(await readTaskSearchRequestProbe(orcaPage)).toEqual({
       countQueries: ['is:issue ratex'],

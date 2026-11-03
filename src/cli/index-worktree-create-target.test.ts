@@ -115,6 +115,7 @@ describe('orca cli worktree awareness', () => {
     queueFixtures(
       callMock,
       worktreeListFixture([buildWorktree('/tmp/repo', 'main', 'abc', 'repo-1')]),
+      okFixture('req_settings', { settings: { defaultTuiAgent: 'blank' } }),
       okFixture('req_create', {
         worktree: buildWorktree('/tmp/repo/feature', 'feature', 'abc', 'repo-1')
       })
@@ -126,7 +127,7 @@ describe('orca cli worktree awareness', () => {
       '/tmp/repo'
     )
 
-    expect(callMock).toHaveBeenNthCalledWith(2, 'worktree.create', {
+    expect(callMock).toHaveBeenNthCalledWith(3, 'worktree.create', {
       repo: 'id:repo-1',
       name: 'feature',
       displayName: 'feature',

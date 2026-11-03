@@ -1,3 +1,4 @@
+import { maintainedProfilePath } from './maintained-build'
 import { app } from 'electron'
 import { guardExternalOpensInE2E } from './e2e-external-open-guard'
 import { quitProcess } from './process-quit-request'
@@ -203,6 +204,16 @@ export function configureDevUserDataPath(isDev: boolean): void {
     return
   }
 
+  const maintainedProfile = maintainedProfilePath(
+    '',
+    app.getPath('appData'),
+    process.execPath,
+    process.env.ORCA_MAINTAINED_VERIFICATION_PROFILE
+  )
+  if (maintainedProfile) {
+    app.setPath('userData', maintainedProfile)
+    return
+  }
   if (!isDev) {
     return
   }

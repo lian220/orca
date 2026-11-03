@@ -1,6 +1,5 @@
 import { useAppStore } from '@/store/index'
 import { reserveStructuredLaunchSlot } from './structured-agent-session-launch-surface'
-import type { TuiAgent } from '../../../../../shared/tui-agent'
 import type { ExecutionHostId } from '../../../../../shared/execution-host'
 import {
   abandonStructuredAgentSessionLaunchIntent,
@@ -187,7 +186,7 @@ function joinStructuredLaunchState(
 
 function structuredAgentLaunchState(
   worktreeId: string,
-  agent: TuiAgent,
+  agent: string,
   options: StructuredAgentLaunchOptions
 ): StructuredLaunchStateResult {
   const identity = structuredLaunchIdentity(worktreeId, agent, options)
@@ -269,7 +268,7 @@ export function cancelStructuredAgentLaunch(worktreeId: string, sessionId: strin
 
 export function startStructuredAgentLaunch(
   worktreeId: string,
-  agent: TuiAgent,
+  agent: string,
   options: StructuredAgentLaunchOptions
 ): StructuredAgentLaunchResult {
   const { state, caller, joined } = structuredAgentLaunchState(worktreeId, agent, options)

@@ -5,6 +5,12 @@ import type {
 import { translate } from '../i18n/mobile-i18n'
 
 export const SEND_FAILURE_COPY = {
+  sessionBusy: (values) =>
+    translate(
+      'session.failure.sessionBusy',
+      'The agent is still working. This message was not sent. Wait for the current turn to finish.',
+      values
+    ),
   providerExitedRow: (values) =>
     translate(
       'session.failure.providerExitedRow',

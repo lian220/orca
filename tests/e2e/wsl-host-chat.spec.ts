@@ -39,6 +39,7 @@ test.describe('native chat on a WSL host', () => {
     await hub.evaluate(async (command) => {
       await window.__store?.getState().updateSettings({
         nativeChatProviders: { claude: true, codex: true },
+        defaultTuiAgent: 'blank',
         agentCmdOverrides: { claude: command }
       })
     }, buildFakeAgentCommandOverride(claudeStub.command))
@@ -55,11 +56,14 @@ test.describe('native chat on a WSL host', () => {
     try {
       const { page } = desktop
       await page.evaluate(async () => {
-        const settings = await window.api.settings.set({ experimentalWslHosts: true })
+        const settings = await window.api.settings.set({
+          experimentalWslHosts: true,
+          uiLanguage: 'en'
+        })
         window.__store?.setState({ settings })
         await window.__store?.getState().updateSettings({
           nativeChatProviders: { claude: true, codex: true },
-          defaultTuiAgent: 'claude'
+          defaultTuiAgent: 'blank'
         })
       })
       const added = await page.evaluate(() =>
@@ -183,6 +187,7 @@ test.describe('native chat on a WSL host', () => {
     await hub.evaluate(async (command) => {
       await window.__store?.getState().updateSettings({
         nativeChatProviders: { claude: true, codex: true },
+        defaultTuiAgent: 'blank',
         agentCmdOverrides: { claude: command }
       })
     }, buildFakeAgentCommandOverride(claudeStub.command))
@@ -198,11 +203,14 @@ test.describe('native chat on a WSL host', () => {
     try {
       const { page } = desktop
       await page.evaluate(async () => {
-        const settings = await window.api.settings.set({ experimentalWslHosts: true })
+        const settings = await window.api.settings.set({
+          experimentalWslHosts: true,
+          uiLanguage: 'en'
+        })
         window.__store?.setState({ settings })
         await window.__store?.getState().updateSettings({
           nativeChatProviders: { claude: true, codex: true },
-          defaultTuiAgent: 'claude'
+          defaultTuiAgent: 'blank'
         })
       })
       const added = await page.evaluate(() =>
@@ -313,6 +321,7 @@ test.describe('native chat on a WSL host', () => {
     await hub.evaluate(async (command) => {
       await window.__store?.getState().updateSettings({
         nativeChatProviders: { claude: true, codex: true },
+        defaultTuiAgent: 'blank',
         agentCmdOverrides: { claude: command }
       })
     }, buildFakeAgentCommandOverride(claudeStub.command))
@@ -336,11 +345,14 @@ test.describe('native chat on a WSL host', () => {
     try {
       const { page } = desktop
       await page.evaluate(async () => {
-        const settings = await window.api.settings.set({ experimentalWslHosts: true })
+        const settings = await window.api.settings.set({
+          experimentalWslHosts: true,
+          uiLanguage: 'en'
+        })
         window.__store?.setState({ settings })
         await window.__store?.getState().updateSettings({
           nativeChatProviders: { claude: true, codex: true },
-          defaultTuiAgent: 'claude'
+          defaultTuiAgent: 'blank'
         })
       })
       const added = await page.evaluate(() =>

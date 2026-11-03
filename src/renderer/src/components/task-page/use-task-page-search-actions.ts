@@ -23,6 +23,7 @@ export function useTaskPageSearchActions(model: TaskPageGitHubQuietRefreshModel)
     taskSearchInput,
     setTaskSearchInput,
     setAppliedTaskSearch,
+    appliedTaskSearch,
     taskSearchInputRef,
     setActiveTaskPreset,
     setTasksFiltering,
@@ -101,15 +102,16 @@ export function useTaskPageSearchActions(model: TaskPageGitHubQuietRefreshModel)
       githubItemsPreset: null,
       githubItemsQuery: scoped
     })
-    setTasksFiltering(true)
-    setTaskRefreshNonce((current) => current + 1)
+    if (scoped !== appliedTaskSearch) {
+      setTasksFiltering(true)
+    }
   }, [
+    appliedTaskSearch,
     activeGithubTaskKind,
     setTaskResumeState,
     taskSearchInput,
     setTasksFiltering,
     setTaskSearchInput,
-    setTaskRefreshNonce,
     setAppliedTaskSearch,
     setActiveTaskPreset
   ])

@@ -8,13 +8,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 import type * as RunProcessModule from '@orca/process-host'
 import type * as FsPromisesModule from 'node:fs/promises'
+import type * as OsModule from 'node:os'
 import type { RuntimeBrowserCommandHost } from '../runtime/browser/browser-command-contracts'
 import { RuntimeBrowserPageRegistry } from '../runtime/runtime-browser-page-registry'
 import { readRuntimeMetadataAsync } from '../runtime/runtime-metadata'
 
-const { spawnProcessMock, lockedRemovalPaths } = vi.hoisted(() => ({
+const { spawnProcessMock, lockedRemovalPaths, isolatedHome } = vi.hoisted(() => ({
   spawnProcessMock:
     vi.fn<(spec: ProcessSpec) => ReturnType<typeof RunProcessModule.spawnProcess>>(),
+  isolatedHome: { path: '' },
   lockedRemovalPaths: new Set<string>()
 }))
 
@@ -52,6 +54,11 @@ import {
 vi.mock('./orcad-browser-provider', () => ({ resolveOrcadBrowserProvider: vi.fn() }))
 // The fixture's /Applications/Orca.app path would open a real macOS install park.
 vi.mock('./orcad-browser-install-park', () => ({ openOrcadBrowserInstallPark: () => null }))
+
+vi.mock('node:os', async (importOriginal) => {
+  const actual = await importOriginal<typeof OsModule>()
+  return { ...actual, homedir: () => isolatedHome.path || actual.tmpdir() }
+})
 
 vi.mock('electron', () => ({ app: { getPath: () => harnessRoot }, ipcMain: {} }))
 vi.mock('../browser/browser-manager', () => ({ browserManager: {} }))
@@ -153,6 +160,7 @@ async function sidecarPid(profile: string): Promise<number> {
 
 beforeEach(async () => {
   harnessRoot = await mkdtemp(join(tmpdir(), 'orcad-electron-harness-'))
+  isolatedHome.path = harnessRoot
   logPath = join(harnessRoot, 'requests.jsonl')
   controlPath = join(harnessRoot, 'control.json')
   sidecarMode = undefined

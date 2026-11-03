@@ -23,8 +23,9 @@ export function pickerLaunchRow(
   surface: AgentPickerSurface
 ): NewTabAgentMenuRow {
   return {
-    agent: entry.agent,
-    kind: surface === 'chat' ? 'chat' : 'cli',
+    ...(surface === 'chat'
+      ? { kind: 'chat' as const, agent: entry.agent }
+      : { kind: 'cli' as const, agent: entry.agent }),
     executionHostId: entry.rows[0]?.executionHostId
   }
 }

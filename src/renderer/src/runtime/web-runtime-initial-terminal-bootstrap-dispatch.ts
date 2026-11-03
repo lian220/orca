@@ -1,3 +1,7 @@
+import {
+  loadEmptyWorkspaceDefaultChatDetection,
+  openDefaultAgentChatInEmptyWorkspace
+} from '@/lib/empty-workspace-default-agent-chat'
 import { useAppStore } from '../store'
 import { createWebRuntimeSessionTerminal } from './web-runtime-terminal-creation'
 import type { WebRuntimeTerminalCreateOutcome } from './web-runtime-session-types'
@@ -17,6 +21,19 @@ export async function dispatchWebRuntimeInitialTerminalBootstrap(
   }
   let outcome: WebRuntimeTerminalCreateOutcome
   try {
+    await loadEmptyWorkspaceDefaultChatDetection(worktreeId)
+    if (useAppStore.getState().activeWorktreeId !== worktreeId) {
+      endWebRuntimeInitialTerminalBootstrap(environmentId, worktreeId)
+      return false
+    }
+    const chat = openDefaultAgentChatInEmptyWorkspace(worktreeId, () => {
+      endWebRuntimeInitialTerminalBootstrap(environmentId, worktreeId)
+      return false
+    })
+    if (chat) {
+      markWebRuntimeInitialTerminalBootstrapAwaitingMirror(environmentId, worktreeId)
+      return true
+    }
     outcome = await createWebRuntimeSessionTerminal({ worktreeId, environmentId, activate: true })
   } catch (error) {
     endWebRuntimeInitialTerminalBootstrap(environmentId, worktreeId)

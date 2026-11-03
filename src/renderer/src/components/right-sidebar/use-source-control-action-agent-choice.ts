@@ -1,3 +1,4 @@
+import { isTuiAgent } from '../../../../shared/tui-agent-config'
 import {
   buildAgentLaunchRouteInput,
   workspaceKindForWorktreeId
@@ -64,6 +65,7 @@ export function useSourceControlActionAgentChoice(args: {
             observation.model.rows
               .filter((row) => row.kind !== 'chat-unavailable')
               .map((row) => row.agent)
+              .filter(isTuiAgent)
           )
         ]
       : (detectedIds ?? NO_AGENTS)

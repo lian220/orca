@@ -17,10 +17,7 @@ import {
 } from './helpers/persisted-profile-state'
 import { waitForSessionReady } from './helpers/store'
 import { getHistorySessionDirName } from '../../src/main/daemon/history-paths'
-import {
-  listWslDriveUncConversions,
-  writeWslDriveUncConversion
-} from '../../src/main/wsl/wsl-drive-unc-conversion-journal'
+import { writeWslDriveUncConversion } from '../../src/main/wsl/wsl-drive-unc-conversion-journal'
 import { WSL_HOSTS_INTERNAL_GATE_ENV } from '../../src/shared/wsl-host-internal-gate'
 
 test.use({ seedTestRepo: false })
@@ -123,9 +120,8 @@ test('a journaled conversion reopens a UNC drive project at its drive path', asy
       )
     ).toBe(true)
     // The window converts its own stores, then the journal goes.
-    await expect
-      .poll(() => listWslDriveUncConversions(session.userDataDir).length, { timeout: 20_000 })
-      .toBe(0)
+    const journal = join(session.userDataDir, 'wsl-drive-unc-conversions', 'conversion-e2e.json')
+    await expect.poll(() => existsSync(journal), { timeout: 20_000 }).toBe(false)
     await session.close(launched.app)
     launched = undefined
 

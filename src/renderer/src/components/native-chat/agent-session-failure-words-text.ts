@@ -215,6 +215,8 @@ const PIECES: Record<AgentSessionFailureCopyId, (values: AgentSessionFailureCopy
         COPY.commandUnavailable,
         values
       ),
+    sessionBusy: () =>
+      translate('components.native-chat.failureWords.sessionBusy', COPY.sessionBusy),
     queueFull: () => translate('components.native-chat.failureWords.queueFull', COPY.queueFull),
     writeFailed: () =>
       translate('components.native-chat.failureWords.writeFailed', COPY.writeFailed),
@@ -291,12 +293,6 @@ const PIECES: Record<AgentSessionFailureCopyId, (values: AgentSessionFailureCopy
       translate(
         'components.native-chat.failureWords.previousExitUnverifiable',
         COPY.previousExitUnverifiable,
-        values
-      ),
-    sessionNotRestored: (values) =>
-      translate(
-        'components.native-chat.failureWords.sessionNotRestored',
-        COPY.sessionNotRestored,
         values
       )
   }

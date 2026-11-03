@@ -2126,6 +2126,7 @@
       "providerRetrying": "{{agent}} encontrou um problema temporário e está tentando novamente.",
       "providerRetryingQuoted": "{{agent}} está tentando novamente: {{detail}}.",
       "providerStartFailed": "{{agent}} parou antes de terminar de iniciar.",
+      "sessionBusy": "O agente ainda está trabalhando. Esta mensagem não foi enviada. Aguarde o término do turno atual.",
       "queueFull": "Havia mensagens demais aguardando o agente, por isso esta mensagem não foi enviada.",
       "quitTerminalAgent": "Encerre esse agente para continuar o chat aqui.",
       "runCommandAgain": "Execute /{{command}} novamente.",

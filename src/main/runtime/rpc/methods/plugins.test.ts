@@ -20,6 +20,13 @@ function method(name: string): RpcMethod {
   return found
 }
 
+const callerContext = (caller: RpcContext['caller']): RpcContext => ({
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: plugin handlers never touch the runtime.
+  runtime: {} as RpcContext['runtime'],
+  caller
+})
+const cliContext = () => callerContext({ kind: 'local-cli' })
+
 afterEach(() => setPluginServiceForRpc(null))
 
 describe('plugin approval over RPC', () => {
@@ -69,13 +76,6 @@ describe('plugin approval over RPC', () => {
     setPluginServiceForRpc(stub as unknown as PluginService, { applyConsent, applyEnablement })
     return { applyConsent, applyEnablement, recordApprovalAudit }
   }
-
-  const callerContext = (caller: RpcContext['caller']): RpcContext => ({
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: plugin handlers never touch the runtime.
-    runtime: {} as RpcContext['runtime'],
-    caller
-  })
-  const cliContext = () => callerContext({ kind: 'local-cli' })
 
   it('refuses a consent fingerprint read from plugins.list without the approve flag', async () => {
     const { applyConsent } = setup()
@@ -135,11 +135,7 @@ describe('plugin system switch over RPC', () => {
     const switchMethod = method('plugins.setSystemEnabled')
 
     expect(switchMethod.permission).toBe('host-admin')
-    const context: RpcContext = {
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: plugin handlers never touch the runtime.
-      runtime: {} as RpcContext['runtime'],
-      caller: { kind: 'local-cli' }
-    }
+    const context = cliContext()
     await expect(switchMethod.handler({ enabled: true }, context)).resolves.toEqual({
       enabled: true,
       plugins: []
@@ -153,11 +149,7 @@ describe('plugin system switch over RPC', () => {
 describe('plugins.devInspect', () => {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: devInspect reads only whenReady.
   const service = { whenReady: vi.fn().mockResolvedValue(undefined) } as unknown as PluginService
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: plugin handlers never touch the runtime.
-  const context: RpcContext = {
-    runtime: {} as RpcContext['runtime'],
-    caller: { kind: 'local-cli' }
-  }
+  const context = cliContext()
 
   it('opens DevTools through the desktop hook and reports the count', async () => {
     const openFrameDevTools = vi.fn().mockReturnValue(2)
@@ -181,11 +173,7 @@ describe('plugins.devInspect', () => {
 })
 
 describe('plugins.restart', () => {
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: plugin handlers never touch the runtime.
-  const context: RpcContext = {
-    runtime: {} as RpcContext['runtime'],
-    caller: { kind: 'local-cli' }
-  }
+  const context = cliContext()
 
   function setup(manifest: { main?: string }) {
     const deactivatePlugin = vi.fn().mockResolvedValue(undefined)
@@ -224,11 +212,7 @@ describe('plugins.restart', () => {
 })
 
 describe('plugins.getLogs', () => {
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: plugin handlers never touch the runtime.
-  const context: RpcContext = {
-    runtime: {} as RpcContext['runtime'],
-    caller: { kind: 'local-cli' }
-  }
+  const context = cliContext()
 
   it('passes the cursor through and returns the next one', async () => {
     const logs = new PluginLogBuffer()
