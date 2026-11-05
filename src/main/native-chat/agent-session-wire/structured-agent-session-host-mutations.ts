@@ -86,9 +86,10 @@ export function sendStructuredAgentSessionTurn(
           if (blocked) {
             return blocked
           }
-          // Admission runs under the conversation's mutation lane. Refuse before queueing
-          // so legacy clients cannot turn a busy refusal into an automatic later execution.
+          // Admission runs under the conversation's mutation lane. A send that did not ask to queue
+          // is refused, so a busy refusal never becomes an automatic later execution.
           if (
+            params.delivery !== 'queue-if-active' &&
             ctx.agents.capabilities(ctx.agent)?.concurrentSendPolicy === 'reject' &&
             contextStructuredAgentSessionCurrentWork(ctx).working()
           ) {
