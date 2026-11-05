@@ -20,10 +20,9 @@ import type { ProviderStartAttempt } from '../provider-process/provider-acquisit
 import { waitForAcpExit, type AcpStructuredConnection } from './acp-structured-connection'
 import { AcpConnectionClosedError } from './acp-errors'
 import { withProviderSpawnAbsence } from '../provider-process/provider-executable-missing'
-import { applyAcpMessageOptions } from './acp-message-execution-options'
 import { AgentSessionOptionRejectedError } from '../native-chat/agent-session-wire/structured-agent-session-option-error'
 import * as stop from './acp-structured-stop'
-import { acpDispatchPrompt } from './acp-prompt-content'
+import { dispatchAcpSession } from './acp-structured-dispatch'
 import {
   ACP_OPTION_WRITE_TIMEOUT_MS,
   ACP_STOP_GRACE_MS,
@@ -39,7 +38,6 @@ import { AcpTextTasks } from './acp-text-task'
 import { supportsAcpStructuredLocation } from './acp-structured-location-support'
 import { acpAcquireFailure, acpRefusedStart } from './acp-startup-outcome'
 import { openAcpStart } from './acp-structured-start-open'
-import { admitStructuredAgentSessionInput } from '../native-chat/agent-session-wire/structured-agent-session-input-admission'
 
 export class AcpStructuredSessionAdapter implements SessionAdapter {
   readonly atRestCommands: AcpStructuredSessionAdapterDeps['atRestCommands']
@@ -184,40 +182,13 @@ export class AcpStructuredSessionAdapter implements SessionAdapter {
       return rejectedAcpDispatch(lost)
     }
     const session = this.live(input.sessionId)
-    const prompt = await acpDispatchPrompt(input.body, session)
-    if (!Array.isArray(prompt)) {
-      return { state: 'rejected', ...prompt }
-    }
-    if (this.children.sessions.get(input.sessionId) !== session || session.journalClosed !== null) {
-      // Attachment reads may outlive the child; this send never reached it.
-      return rejectedAcpDispatch(session)
-    }
-    const { sessionId, fence, signal } = input
-    signal?.throwIfAborted()
-    input.onInputPreparation?.()
-    const optionsApplied = await applyAcpMessageOptions(
+    return dispatchAcpSession(
+      input,
       session,
-      input.executionOptions,
-      (key, value) => this.setOption({ sessionId, fence, key, value, signal }),
-      () =>
-        this.children.sessions.get(input.sessionId) === session && session.journalClosed === null,
-      signal
+      () => this.children.sessions.get(input.sessionId) === session,
+      (option) => this.setOption(option),
+      this.now
     )
-    if (!optionsApplied) {
-      return rejectedAcpDispatch(session)
-    }
-    input.signal?.throwIfAborted()
-    await input.beforeDispatch?.()
-    input.signal?.throwIfAborted()
-    await admitStructuredAgentSessionInput(input.admitFreshInput, () =>
-      session.turns.dispatch({
-        clientMessageId: input.clientMessageId,
-        prompt,
-        requestedAt: input.requestedAt ?? this.now()
-      })
-    )
-    // Admission precedes provider confirmation of the send.
-    return { state: 'admitted' }
   }
 
   compact: NonNullable<SessionAdapter['compact']> = async (input) =>

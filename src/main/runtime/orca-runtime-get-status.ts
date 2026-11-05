@@ -182,6 +182,10 @@ export abstract class OrcaRuntimeWithGetStatus extends OrcaRuntimeWithPtyControl
     return this.machineName.read()
   }
 
+  readSystemMachineName(): string {
+    return this.machineName.readSystemName()
+  }
+
   readPairedDeviceName(deviceId: string): string | null {
     return this.getPairedDeviceNameFn(deviceId)
   }

@@ -15,6 +15,8 @@ export type AgentSessionCapabilities = {
   /** A message sent while a turn runs: handed to the running agent at once (`inject`), or held by
    *  Orca and sent as the next prompt once the turn ends (`queue`). */
   steering: 'inject' | 'queue'
+  /** The host refuses new sends while this conversation is working, including queue requests. */
+  concurrentSendPolicy?: 'reject'
   /** provider enforces its launch permission setting; orca answers emitted requests by the session setting. Provider settings still control when requests are emitted, so this is not sandboxing. */
   approvalEnforcement: 'provider' | 'orca'
 }

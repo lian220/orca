@@ -1,4 +1,5 @@
 import type { Readable, Writable } from 'node:stream'
+import { acpClientCapabilities } from './acp-client-capabilities'
 import { z } from 'zod'
 import { AcpRpcError } from './acp-errors'
 import { AcpPromptRequest } from './acp-prompt-request'
@@ -29,6 +30,7 @@ import {
   SetSessionConfigOptionResponseSchema,
   SessionIdSchema,
   type InitializeRequest,
+  type ClientCapabilities,
   type InitializeResponse,
   type AuthenticateResponse,
   type CancelNotification,
@@ -51,6 +53,7 @@ export type AcpSessionRuntimeOptions = {
   /** OMP's typed busy refusal confirms this prompt never ran. */
   retryBusyPrompts?: boolean
   clientInfo?: InitializeRequest['clientInfo']
+  clientCapabilitiesMeta?: ClientCapabilities['_meta']
   peer?: AcpPeerOptions
   onPermission?: AcpPermissionHandler
   /** After abort, handlers still reply or throw (-32800); close ends unanswered requests. */
@@ -115,7 +118,7 @@ export class AcpSessionRuntime {
       'initialize',
       {
         protocolVersion: ACP_PROTOCOL_VERSION,
-        clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
+        clientCapabilities: acpClientCapabilities(this.options.clientCapabilitiesMeta),
         ...(this.options.clientInfo === undefined ? {} : { clientInfo: this.options.clientInfo })
       } satisfies InitializeRequest,
       InitializeResponseSchema

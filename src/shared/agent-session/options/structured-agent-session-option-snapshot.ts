@@ -250,6 +250,10 @@ export function canSetStructuredAgentSessionOption(
   interactionReady = true,
   pending = false
 ): boolean {
+  // Hermes chooses its own model and effort; Orca only relays the permission mode.
+  if (state.record.agent === 'hermes' && id !== 'permissionMode') {
+    return false
+  }
   if (!interactionReady || pending || (id === 'fastMode' && state.fastModeRestricted)) {
     return false
   }

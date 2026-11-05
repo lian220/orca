@@ -15,6 +15,15 @@ const CODEX = {
 }
 
 describe('decodeAgentSessionAgentsResult', () => {
+  it('preserves a host busy policy without changing legacy steering', () => {
+    const hermes = {
+      ...CODEX,
+      agent: 'hermes',
+      capabilities: { ...CODEX.capabilities, concurrentSendPolicy: 'reject' }
+    }
+    expect(decodeAgentSessionAgentsResult({ agents: [hermes] })).toEqual([hermes])
+  })
+
   it('drops a row it cannot read and keeps the rest', () => {
     expect(
       decodeAgentSessionAgentsResult({

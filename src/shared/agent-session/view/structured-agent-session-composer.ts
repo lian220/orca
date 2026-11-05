@@ -115,7 +115,7 @@ export function structuredSlashCommands(
     ...getTextDrivenNativeChatCommands(agent).filter(
       (entry) => !hostOwned.some((offered) => offered.name === entry.name)
     )
-  ]
+  ].filter(({ name }) => agent !== 'hermes' || !['model', 'effort'].includes(name))
 }
 
 /** Host commands remain first; reported catalogs add other names. */
@@ -132,7 +132,10 @@ export function structuredSessionSlashCommands(
   const offered = new Set(hostOwned.map(({ name }) => name))
   return [
     ...hostOwned,
-    ...sessionSlashCommandSuggestions(agent, reported).filter(({ name }) => !offered.has(name))
+    ...sessionSlashCommandSuggestions(agent, reported).filter(
+      ({ name }) =>
+        !offered.has(name) && (agent !== 'hermes' || !['model', 'effort'].includes(name))
+    )
   ]
 }
 
@@ -271,6 +274,9 @@ export async function dispatchStructuredAgentSessionComposerCommand(
   }
   if (command.name !== 'model' && command.name !== 'effort') {
     return unavailable(command.name)
+  }
+  if (controller.agent === 'hermes') {
+    return { ...unavailable(command.name), accepted: false }
   }
   const descriptor = controller.snapshot.find((entry) => entry.id === command.name)
   if (!command.argument) {

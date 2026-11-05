@@ -1,6 +1,7 @@
 import { statusFeed } from './structured-agent-session-rpc-status.test-fixture'
 export { STATUS_SESSION, STATUS_ITEMS } from './structured-agent-session-rpc-status.test-fixture'
 import {
+  TEST_RUNTIME_IDENTITY,
   SESSION,
   FINGERPRINT,
   OPERATION,
@@ -168,8 +169,7 @@ export function dispatcher(
   })
   const runtime = {
     structuredAgentModelCatalog: async () => getStructuredAgentSessionHost()?.deps.modelCatalog,
-    getRuntimeId: () => 'runtime-1',
-    readPairedDeviceName: () => null,
+    ...TEST_RUNTIME_IDENTITY,
     getClientSettings: () => ({ nativeChatProviders: EVERY_AGENT_CHAT }),
     // The host reads saved settings privately; follow the client settings each test chose.
     requireStore: () => ({ getSettings: () => runtime.getClientSettings() }),

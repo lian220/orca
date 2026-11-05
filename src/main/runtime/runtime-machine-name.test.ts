@@ -74,6 +74,17 @@ describe('RuntimeMachineName', () => {
     expect(runProcessMock).toHaveBeenCalledTimes(1)
   })
 
+  it('keeps the detected ComputerName available when the runtime has a configured alias', async () => {
+    onDarwin()
+    runProcessMock.mockResolvedValue(friendlyResult)
+    const machine = new module.RuntimeMachineName(() => 'Orca alias')
+    await machine.ready()
+
+    expect(machine.read()).toBe('Orca alias')
+    expect(machine.readSystemName()).toBe('Friendly Name')
+    expect(runProcessMock).toHaveBeenCalledTimes(1)
+  })
+
   it('retries a timed-out lookup after the retry interval instead of latching the hostname', async () => {
     onDarwin()
     vi.useFakeTimers()

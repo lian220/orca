@@ -28,9 +28,12 @@ import {
   resolveWorktreeCreateCwdContext,
   resolveCurrentWorktreeSelector
 } from '../selectors'
-import type { TuiAgent } from '../../shared/agent-launch/catalog/tui-agent'
-import { parseCliAgent, readCliAgentLaunch } from '../agent-launch-request'
-import { createWorktreeWithAgent } from './worktree-create-agent-launch'
+import { readCliAgentLaunch } from '../agent-launch-request'
+import {
+  createWorktreeWithAgent,
+  getOptionalStartupAgent,
+  readActivatedWorktreeDefaultAgent
+} from './worktree-create-agent-launch'
 import { printLineageSummary } from './worktree-lineage-summary'
 import { projectWorktreePsTerminalVerdict } from '../worktree-ps-terminal-verdict'
 import {
@@ -48,43 +51,16 @@ import {
 import { getOptionalLinearIssueLinkFlag } from './worktree-linear-issue-link'
 import { getWorktreeReadFlags } from './worktree-unread-flag'
 import { getReviewTargetLinkFlags } from './worktree-review-link-flags'
-import { withSetupDecisionRecovery } from './worktree-setup-decision-recovery'
+import {
+  getOptionalSetupDecision,
+  withSetupDecisionRecovery
+} from './worktree-setup-decision-recovery'
 import { assertGitLabLinkFlagProjectsMatch } from './worktree-gitlab-link-context'
 import {
   assertReferenceWritesSupported,
   getCreateReferenceInputs,
   resolveReferenceInputs
 } from '../reference-input'
-
-function getOptionalStartupAgent(flags: Map<string, string | boolean>): TuiAgent | undefined {
-  const agent = getPresentStringFlag(flags, 'agent')
-  if (agent === undefined) {
-    const needsAgent = ['prompt', 'model', 'effort', 'surface', 'retry-launch'].find((name) =>
-      flags.has(name)
-    )
-    if (needsAgent) {
-      throw new RuntimeClientError('invalid_argument', `--${needsAgent} requires --agent`)
-    }
-    return undefined
-  }
-  return parseCliAgent(agent)
-}
-
-function getOptionalSetupDecision(
-  flags: Map<string, string | boolean>
-): 'run' | 'skip' | 'inherit' | undefined {
-  const setup = getPresentStringFlag(flags, 'setup')
-  if (setup !== undefined && setup !== 'run' && setup !== 'skip' && setup !== 'inherit') {
-    throw new RuntimeClientError('invalid_argument', '--setup must be one of: run, skip, inherit')
-  }
-  if (flags.get('run-hooks') === true && setup !== undefined && setup !== 'run') {
-    throw new RuntimeClientError(
-      'invalid_argument',
-      'Choose either --run-hooks or --setup run, not contradictory setup flags.'
-    )
-  }
-  return setup
-}
 
 export const WORKTREE_HANDLERS: Record<string, CommandHandler> = {
   'worktree ps': async ({ flags, client, json }) => {
@@ -209,8 +185,23 @@ export const WORKTREE_HANDLERS: Record<string, CommandHandler> = {
       // Always request CLI provenance, including hand-typed creates without a terminal handle.
       cliProvenanceRequest: callerTerminalHandle ? { callerTerminalHandle } : {}
     }
-    if (agentLaunch) {
-      await createWorktreeWithAgent({ client, flags, create, launch: agentLaunch, json, rawArgs })
+    // An activated workspace opens like one created in the app: with the host's default agent.
+    const defaultAgent =
+      activate && !agentLaunch ? await readActivatedWorktreeDefaultAgent(client) : undefined
+    const launch =
+      agentLaunch ??
+      (defaultAgent
+        ? readCliAgentLaunch(flags, defaultAgent, { createsWorktree: true })
+        : undefined)
+    if (launch) {
+      await createWorktreeWithAgent({
+        client,
+        flags,
+        create,
+        launch,
+        json,
+        rawArgs: defaultAgent && rawArgs ? [...rawArgs, '--agent', defaultAgent] : rawArgs
+      })
       return
     }
     const result = await withSetupDecisionRecovery(

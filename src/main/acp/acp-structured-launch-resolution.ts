@@ -18,17 +18,16 @@ import {
 import { agentSessionProviderHandleKey } from '../../shared/agent-session/lifecycle/agent-session-provider-handle-encoding'
 import type { AgentSessionAccountHome } from '../../shared/agent-session/lifecycle/agent-session-account-home'
 import type { resolveCliCommand } from '../../shared/node-cli-command-resolution'
-import {
-  checkAgentCliVersion,
-  type AgentCliVersionCheck,
-  type AgentCliVersionReader
-} from '../agent-launch/preflight/agent-cli-version-probe'
+import type { AgentCliVersionReader } from '../agent-launch/preflight/agent-cli-version-probe'
+import { checkAcpLaunchVersion } from './acp-launch-version'
+export { checkAcpLaunchVersion } from './acp-launch-version'
 import { AgentCliInstallationError } from '../native-chat/agent-cli-installation-error'
 import {
   copyBesidePinnedMembers,
   resolveInstalledRuntimeRelease
 } from '../node-runtime/managed-runtime-release'
 import { hasExplicitTuiLaunchCommand } from '../../shared/agent-launch/startup/tui-agent-launch-command-override'
+import { isTuiAgent } from '../../shared/agent-launch/catalog/tui-agent-config'
 import { readAgentJournalTurn } from '../../shared/agent-session/lifecycle/agent-session-turn-record'
 import type { JournalLoad } from '../native-chat/agent-session-journal/journal-open'
 import {
@@ -102,6 +101,10 @@ export function resolveAcpLaunchCommand(
     dataDirectory: string | null
   }
 ): StructuredAgentCommand {
+  if (spec.externalRegistration || !isTuiAgent(spec.agent)) {
+    return { command: spec.command, prefixArgs: [] }
+  }
+  const agent = spec.agent
   const homePath = env.HOME ?? env.USERPROFILE ?? options.homePath ?? homedir()
   const pathEnv = [env.PATH ?? env.Path, ...spec.installDirectories({ env, homePath })]
     .filter((entry): entry is string => Boolean(entry))
@@ -109,7 +112,7 @@ export function resolveAcpLaunchCommand(
   const settings = spec.ignoreAgentCommandSetting ? {} : (options.commandSettings ?? {})
   const resolve = (searchPath: string) =>
     resolveStructuredAgentCommand(
-      spec.agent,
+      agent,
       settings,
       { pathEnv: searchPath, homePath },
       {
@@ -118,7 +121,7 @@ export function resolveAcpLaunchCommand(
       }
     )
   const { managedRuntime } = spec
-  if (!managedRuntime || hasExplicitTuiLaunchCommand(settings, spec.agent)) {
+  if (!managedRuntime || hasExplicitTuiLaunchCommand(settings, agent)) {
     return resolve(pathEnv)
   }
   const pin = managedRuntime.pin()
@@ -130,22 +133,6 @@ export function resolveAcpLaunchCommand(
   const { command } = resolve(pathEnv)
   const pinned = command !== spec.command && copyBesidePinnedMembers(command, pin)
   return { command: pinned || spec.command, prefixArgs: [] }
-}
-
-export async function checkAcpLaunchVersion(
-  spec: AcpLaunchSpec,
-  launch: Pick<AcpStructuredLaunch, 'command' | 'prefixArgs' | 'cwd' | 'env'>,
-  wantVersion: boolean,
-  read?: AgentCliVersionReader
-): Promise<AgentCliVersionCheck> {
-  if (!spec.minimumVersions && !wantVersion) {
-    return { status: 'unknown', version: null }
-  }
-  return checkAgentCliVersion(
-    { program: launch.command, prefixArgs: launch.prefixArgs, cwd: launch.cwd, env: launch.env },
-    spec.minimumVersions ?? [],
-    read
-  )
 }
 
 /** Resolve chats and probes consistently; optionally refresh once after a missing-program lookup. */
@@ -213,7 +200,7 @@ export function acpStructuredLaunchPart(
       visuals !== null,
       deps.probeVersion
     )
-    if (launchVersion.status === 'tooOld') {
+    if (launchVersion.status === 'tooOld' && isTuiAgent(spec.agent)) {
       throw AgentCliInstallationError.tooOld(spec.agent, launchVersion)
     }
     const skill = visuals

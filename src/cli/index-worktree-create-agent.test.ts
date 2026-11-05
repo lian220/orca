@@ -62,6 +62,7 @@ describe('orca cli worktree awareness', () => {
     queueFixtures(
       callMock,
       worktreeListFixture([buildWorktree('/tmp/repo', 'main', 'abc', 'repo-1')]),
+      okFixture('req_settings', { settings: { defaultTuiAgent: 'blank' } }),
       okFixture('req_create', {
         worktree: buildWorktree('/tmp/repo/feature', 'feature', 'abc', 'repo-1')
       })
@@ -73,7 +74,7 @@ describe('orca cli worktree awareness', () => {
       '/tmp/repo'
     )
 
-    expect(callMock).toHaveBeenNthCalledWith(2, 'worktree.create', {
+    expect(callMock).toHaveBeenNthCalledWith(3, 'worktree.create', {
       repo: 'id:repo-1',
       name: 'feature',
       displayName: 'feature',
@@ -90,6 +91,38 @@ describe('orca cli worktree awareness', () => {
       callerTerminalHandle: undefined,
       cliProvenanceRequest: {}
     })
+  })
+
+  it('opens the configured Hermes agent on activation without an explicit agent flag', async () => {
+    queueFixtures(
+      callMock,
+      okFixture('req_settings', { settings: { defaultTuiAgent: 'hermes', disabledTuiAgents: [] } }),
+      agentLaunchHostFixture(),
+      agentLaunchFixture('repo-1::/tmp/repo/chat'),
+      okFixture('req_show', { worktree: buildWorktree('/tmp/repo/chat', 'chat', 'abc', 'repo-1') })
+    )
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+    await main(
+      [
+        'worktree',
+        'create',
+        '--repo',
+        'id:repo-1',
+        '--name',
+        'chat',
+        '--no-parent',
+        '--activate',
+        '--json'
+      ],
+      '/tmp/repo'
+    )
+    expect(callMock).toHaveBeenCalledWith(
+      'agent.launchReplay',
+      expect.objectContaining({
+        agent: 'hermes',
+        presentation: 'focused'
+      })
+    )
   })
 
   it('starts an agent worktree through agent.launch, in the background unless activation is explicit', async () => {

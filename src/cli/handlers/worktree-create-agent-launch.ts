@@ -8,6 +8,7 @@ import {
 import type { RuntimeWorktreeCreateResult, RuntimeWorktreeRecord } from '../../shared/runtime-types'
 import {
   callAgentLaunch,
+  parseCliAgent,
   formatAgentLaunch,
   hasLaunchModelFlags,
   getAgentLaunchCapabilities,
@@ -20,6 +21,51 @@ import { printLineageSummary } from './worktree-lineage-summary'
 import { printHookWarning } from './worktree-removal-warnings'
 import { withSetupDecisionRecovery } from './worktree-setup-decision-recovery'
 import { withCliAgentLaunchRecovery } from '../agent-launch-recovery'
+import type { AgentLaunchSettings } from '../../shared/agent-launch/choices/agent-launch-settings'
+import type { TuiAgent } from '../../shared/agent-launch/catalog/tui-agent'
+import { isTuiAgent } from '../../shared/agent-launch/catalog/tui-agent-config'
+import { isTuiAgentEnabled } from '../../shared/agent-launch/catalog/tui-agent-selection'
+import { getPresentStringFlag } from '../flags'
+
+export function getOptionalStartupAgent(
+  flags: Map<string, string | boolean>
+): TuiAgent | undefined {
+  const agent = getPresentStringFlag(flags, 'agent')
+  if (agent === undefined) {
+    const needsAgent = ['prompt', 'model', 'effort', 'surface', 'retry-launch'].find((name) =>
+      flags.has(name)
+    )
+    if (needsAgent) {
+      throw new RuntimeClientError('invalid_argument', `--${needsAgent} requires --agent`)
+    }
+    return undefined
+  }
+  return parseCliAgent(agent)
+}
+
+/** The host's saved default agent, when it is one this activation may start; older hosts have none. */
+export async function readActivatedWorktreeDefaultAgent(
+  client: RuntimeClient
+): Promise<TuiAgent | undefined> {
+  try {
+    const { result } = await client.call<{ settings: AgentLaunchSettings }>(
+      'settings.getAgentLaunch'
+    )
+    const { defaultTuiAgent: agent, disabledTuiAgents, newWorkspaceSetupOnly } = result.settings
+    if (
+      !newWorkspaceSetupOnly &&
+      isTuiAgent(agent) &&
+      isTuiAgentEnabled(agent, disabledTuiAgents)
+    ) {
+      return agent
+    }
+  } catch (error) {
+    if (!(error instanceof Error && 'code' in error && error.code === 'method_not_found')) {
+      throw error
+    }
+  }
+  return undefined
+}
 
 type WorktreeAgentLaunchResult = Pick<
   RuntimeWorktreeCreateResult,

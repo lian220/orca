@@ -1,4 +1,4 @@
-import { AgentLaunchTextModelDefault } from './AgentLaunchTextModelDefault'
+import { AgentLaunchSetupModelList } from './AgentLaunchSetupModelList'
 import { textActionArgumentsOwnModel } from '../../../../shared/agent-launch/picker/agent-launch-picker-text-action'
 import type { AgentLaunchSetupPanelProps } from './AgentLaunchSetupButton'
 import {
@@ -6,16 +6,8 @@ import {
   agentLaunchSetupCatalogState as catalogState
 } from './agent-launch-setup-option-rows'
 import { useRef, useState } from 'react'
-import { Check, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { getAgentSessionOptionLaunchCatalog } from '../../../../shared/agent-session/options/agent-session-option-catalog'
-import {
-  Command,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem
-} from '@/components/ui/command'
 import { translate } from '@/i18n/i18n'
 import { agentModelChoiceChips } from './launch-settings/agent-model-choice-chips'
 import { isScreenSubmitShortcut } from '@/lib/screen-submit-shortcut'
@@ -62,13 +54,13 @@ export function AgentLaunchSetupPanel({
       onDraftChange(applyAgentPickerEdit(entry, current, edit))
     }
   }
-  const [modelQuery, setModelQuery] = useState('')
-  const [legacy, setLegacy] = useState(false)
   const [argumentsOpen, setArgumentsOpen] = useState(entry.defaultSurface === 'terminal')
   const argumentsKnown = agentPickerArgumentsKnown(entry, draft)
   const effective = agentPickerEffectiveChoices(entry, draft)
   const argumentsView = agentPickerPanelArguments(entry, draft)
   const models = agentPickerModels(entry)
+  // Hermes picks its own model; offering Orca's list would only suggest a choice it ignores.
+  const showsModelOptions = entry.agent !== 'hermes'
   const defaultsPending =
     draft.surface === 'chat' ? entry.structuredDefaultsPending : entry.defaultsPending
   const seed = getAgentSessionOptionLaunchCatalog(entry.agent)
@@ -85,7 +77,9 @@ export function AgentLaunchSetupPanel({
   const { hasModels, catalogPending, catalogMessage } = catalogState(entry, models, currentModel)
   const modelInArguments = textActionArgumentsOwnModel(entry, draft)
   const modelDisabled = disabled || defaultsPending || catalogPending
-  const options = agentPickerEntryOptions(entry, currentModel, draft.surface)
+  const options = showsModelOptions
+    ? agentPickerEntryOptions(entry, currentModel, draft.surface)
+    : []
   const optionRows = agentLaunchSetupOptionRows({
     options,
     models,
@@ -144,7 +138,6 @@ export function AgentLaunchSetupPanel({
     argumentsView.context
   )
   const note = agentLaunchSetupArgumentsNote(entry.label, options, !seed?.modelApply.cli?.length)
-  const legacyCount = models.filter((model) => model.isLegacy && !model.hidden).length
   return (
     <div
       className="flex w-full flex-col"
@@ -172,120 +165,23 @@ export function AgentLaunchSetupPanel({
         }
       }}
     >
-      <Command
-        surface="inline"
-        density="model"
-        onKeyDownCapture={(event) => {
-          if (
-            !disabled &&
-            !isImeOwnedKeyboardEvent(event) &&
-            event.key === 'Enter' &&
-            event.currentTarget.querySelector(
-              '[cmdk-item][data-selected="true"][data-current="true"]'
-            )
-          ) {
-            event.preventDefault()
-            event.stopPropagation()
-            use(mode === 'select' ? draft.surface : entry.defaultSurface)
-          }
-        }}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') {
-            event.stopPropagation()
-          }
-        }}
-      >
-        <CommandInput
-          autoFocus
-          disabled={modelDisabled}
-          aria-busy={catalogPending}
-          value={modelQuery}
-          onValueChange={setModelQuery}
-          aria-label={translate('agentPicker.searchModels', 'Search models')}
-          placeholder={translate('agentPicker.searchAgentModels', 'Search {{agent}} models…', {
-            agent: entry.label
-          })}
+      {showsModelOptions ? (
+        <AgentLaunchSetupModelList
+          entry={entry}
+          draft={draft}
+          mode={mode}
+          disabled={disabled}
+          models={models}
+          currentModel={currentModel}
+          modelDisabled={modelDisabled}
+          catalogPending={catalogPending}
+          catalogMessage={catalogMessage}
+          hasModels={hasModels}
+          modelInArguments={modelInArguments}
+          editDraft={editDraft}
+          use={use}
         />
-        <CommandList className="max-h-56" data-focus-behavior="page">
-          {catalogMessage ? (
-            <div className="px-2 py-1.5 text-xs text-muted-foreground" role="status">
-              {catalogMessage}
-            </div>
-          ) : null}
-          {hasModels &&
-          modelQuery &&
-          entry.catalog.origin !== 'unknown' &&
-          !entry.catalog.listingInProgress &&
-          entry.catalogRead !== 'pending' &&
-          entry.catalogRead !== 'failed' &&
-          entry.catalogRead !== 'unsupported' ? (
-            <CommandEmpty>
-              {translate('agentPicker.noModels', 'No models match your search.')}
-            </CommandEmpty>
-          ) : null}
-          <CommandGroup>
-            <AgentLaunchTextModelDefault
-              entry={entry}
-              disabled={modelDisabled}
-              modelInArguments={modelInArguments}
-              onSelect={editDraft}
-            />
-            {legacy && !modelQuery ? (
-              <CommandItem value="__back__" disabled={disabled} onSelect={() => setLegacy(false)}>
-                <ChevronLeft className="size-3.5 text-muted-foreground" />
-                {translate('agentPicker.legacyModels', 'Legacy models')}
-              </CommandItem>
-            ) : null}
-            {models
-              .filter(
-                (model) =>
-                  !model.hidden &&
-                  (model.id === currentModel || modelQuery || Boolean(model.isLegacy) === legacy)
-              )
-              .map((model) => (
-                <CommandItem
-                  key={model.id}
-                  value={model.id}
-                  keywords={[model.label]}
-                  disabled={modelDisabled}
-                  data-current={currentModel === model.id && !modelInArguments}
-                  onSelect={() => editDraft({ kind: 'choice', patch: { model: model.id } })}
-                >
-                  {model.label}
-                  <span className="ml-auto flex size-3.5 shrink-0 items-center justify-center">
-                    {currentModel === model.id && !modelInArguments ? (
-                      <Check className="size-3.5 text-muted-foreground" />
-                    ) : null}
-                  </span>
-                </CommandItem>
-              ))}
-            {!legacy && !modelQuery && legacyCount > 0 ? (
-              <CommandItem value="__legacy__" disabled={disabled} onSelect={() => setLegacy(true)}>
-                <span className="flex min-w-0 flex-col">
-                  <span>{translate('agentPicker.legacyModels', 'Legacy models')}</span>
-                  <span className="text-muted-foreground">
-                    {translate('agentPicker.legacyModelCount', '{{total}} models', {
-                      total: legacyCount
-                    })}
-                  </span>
-                </span>
-                <ChevronRight className="ml-auto size-3.5 text-muted-foreground" />
-              </CommandItem>
-            ) : null}
-            {currentModel && !models.some((model) => model.id === currentModel) ? (
-              <CommandItem
-                value={currentModel}
-                disabled={modelDisabled}
-                onSelect={() => {}}
-                data-current="true"
-              >
-                {currentModel}
-                <Check className="ml-auto size-3.5 text-muted-foreground" />
-              </CommandItem>
-            ) : null}
-          </CommandGroup>
-        </CommandList>
-      </Command>
+      ) : null}
       <div className="grid min-w-0 grid-cols-1 gap-2.5 border-t border-border px-3 pt-2.5 pb-1">
         {renderOptions(
           optionRows.filter((row) => row.id !== 'fastMode' && row.id !== 'serviceTier')

@@ -28,6 +28,7 @@ import { NativeChatSessionOptionRows } from './NativeChatSessionOptionRows'
 import { NativeChatSessionOptionWriteGroup } from './NativeChatSessionOptionWriteGroup'
 
 export type NativeChatSessionOptionPickersProps = {
+  agent?: string
   surface: SessionOptionsSurface | null
   snapshot: SessionOptionDescriptor[]
   isWorking: boolean
@@ -303,6 +304,7 @@ function SessionOptionPopover(props: {
 }
 
 function NativeChatSessionOptionPickersInner({
+  agent,
   surface,
   snapshot,
   isWorking,
@@ -314,7 +316,8 @@ function NativeChatSessionOptionPickersInner({
   // Consume requests even without a usable picker so composer remounts cannot reopen them.
   useEffect(() => pickerRequest?.consume(), [pickerRequest])
   const reportedModel = snapshot.find((descriptor) => descriptor.category === 'model')
-  if (!surface || !reportedModel) {
+  // Hermes reports a routing policy as its model; the answering model is shown in each reply.
+  if (agent === 'hermes' || !surface || !reportedModel) {
     return null
   }
   const model = withPendingValue(reportedModel, pending.get(reportedModel.id) ?? null)
