@@ -1,4 +1,4 @@
-import { lianProfilePath } from './lian-build'
+import { lianProfilePath } from '../../shared/lian-build'
 import { app } from 'electron'
 import { guardExternalOpensInE2E } from './e2e-external-open-guard'
 import { quitProcess } from './process-quit-request'

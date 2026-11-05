@@ -28,6 +28,17 @@ describe('resolveLaunchUserDataPath', () => {
   })
 })
 
+describe('getPlatformUserDataPath', () => {
+  it("reads the personal build's own profile when the CLI runs on its executable", () => {
+    expect(
+      getPlatformUserDataPath('darwin', '/Users/u', '/Apps/Orca Lian.app/Contents/MacOS/Orca Lian')
+    ).toBe('/Users/u/Library/Application Support/orca-lian')
+    expect(
+      getPlatformUserDataPath('darwin', '/Users/u', '/Applications/Orca.app/Contents/MacOS/Orca')
+    ).toBe('/Users/u/Library/Application Support/orca')
+  })
+})
+
 describe('pinLaunchUserDataPath', () => {
   it('sets the dev override only for a dev executable', () => {
     expect(pinLaunchUserDataPath(['--no-sandbox'], {}, '/p')).toEqual({

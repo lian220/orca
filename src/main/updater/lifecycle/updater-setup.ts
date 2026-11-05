@@ -1,4 +1,4 @@
-import { isLianBuild } from '../../startup/lian-build'
+import { isLianBuild } from '../../../shared/lian-build'
 import { app, powerMonitor } from 'electron'
 import type { BrowserWindow } from 'electron'
 import type { ReleaseBuild, ReleaseChannel } from '../../../shared/release-channel'
