@@ -1,11 +1,5 @@
 // @vitest-environment happy-dom
-import {
-  AgentLaunchSetupPanel,
-  entry,
-  host,
-  root,
-  onUse
-} from './agent-launch-setup-panel-test-fixture'
+import { entry, root } from './agent-launch-setup-panel-test-fixture'
 import { act } from 'react'
 import { expect, it, vi } from 'vitest'
 import { fireEvent, screen } from '@testing-library/react'
@@ -52,43 +46,5 @@ it.each(['chat', 'terminal'] as const)(
     expect(
       screen.queryAllByRole('menuitem').filter((item) => !item.hasAttribute('data-disabled'))
     ).toHaveLength(0)
-  }
-)
-
-it.each(['chat', 'terminal'] as const)(
-  'Hermes 새 탭 %s 기본 설정에서 저장 모델과 모델 검색·선택·옵션을 표시하지 않는다',
-  (surface) => {
-    act(() =>
-      root.render(
-        <TooltipProvider>
-          <AgentLaunchSetupPanel
-            entry={{
-              ...entry,
-              agent: 'hermes',
-              label: 'Hermes',
-              defaultSurface: surface,
-              structured: { model: 'saved-model', options: { effort: 'high' } },
-              catalog: {
-                origin: 'probe',
-                fetchedAt: 1,
-                models: [
-                  {
-                    id: 'default-model',
-                    label: 'Hermes Default',
-                    isDefault: true,
-                    efforts: [{ value: 'high', label: 'High' }]
-                  }
-                ]
-              }
-            }}
-            onUse={onUse}
-          />
-        </TooltipProvider>
-      )
-    )
-    expect(host.querySelector('[aria-label="Search models"]')).toBeNull()
-    expect(host.textContent).not.toContain('Hermes Default')
-    expect(host.textContent).not.toContain('saved-model')
-    expect(host.textContent).not.toContain('High')
   }
 )

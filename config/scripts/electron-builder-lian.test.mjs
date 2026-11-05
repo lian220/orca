@@ -43,7 +43,7 @@ it('builds Orca Lian under its own identity, scheme and output', () => {
   expect(config.directories.output).toBe('dist-lian')
 })
 
-it.each(['', 'Orca Lian Local Signing', '-'])(
+it.each(['', 'Orca Lian Local Signing'])(
   'rejects an absent or non-Apple identity: %s',
   (identity) => {
     expect(() => loadConfig(identity)).toThrow('ORCA_LIAN_SIGN_IDENTITY')

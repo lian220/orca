@@ -1,4 +1,4 @@
-// Personal Orca Lian build: signed with the owner's Apple certificate, never published or auto-updated.
+// Personal Orca Lian build; local ad-hoc signing is explicit, with publishing disabled.
 const { resolve } = require('node:path')
 const base = require('./electron-builder.config.cjs')
 
@@ -7,8 +7,13 @@ const SLUG = 'orca-lian'
 const OUTPUT = 'dist-lian'
 
 const identity = process.env.ORCA_LIAN_SIGN_IDENTITY?.trim()
-if (!identity || !/^(Apple Development|Developer ID Application): /u.test(identity)) {
-  throw new Error('ORCA_LIAN_SIGN_IDENTITY must name your personal Apple signing certificate')
+if (
+  !identity ||
+  (identity !== '-' && !/^(Apple Development|Developer ID Application): /u.test(identity))
+) {
+  throw new Error(
+    'ORCA_LIAN_SIGN_IDENTITY must name your personal Apple signing certificate or explicitly use - for local ad-hoc signing'
+  )
 }
 
 module.exports = {
@@ -29,7 +34,7 @@ module.exports = {
   mac: {
     ...base.mac,
     identity,
-    sign: resolve(__dirname, 'scripts/sign-mac-app.mjs'),
+    sign: resolve(__dirname, 'scripts/desktop-distribution/macos/sign-mac-app.mjs'),
     timestamp: 'none',
     notarize: false,
     target: [{ target: 'dir', arch: ['arm64'] }]
