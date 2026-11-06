@@ -1,3 +1,4 @@
+import { TEST_RUNTIME_IDENTITY } from './structured-agent-session-rpc-client.test-fixture'
 import { EVERY_AGENT_CHAT } from '../../../../shared/native-chat/every-agent-chat.test-fixture'
 import '../unused-default-rpc-methods.test-fixture'
 // Before attach, classify no-effects refusal; at/after attach, failure cannot prove no session exists.
@@ -81,7 +82,7 @@ async function create(
   params: unknown = createParams()
 ): Promise<RpcResponse> {
   const runtime = {
-    getRuntimeId: () => 'runtime-1',
+    ...TEST_RUNTIME_IDENTITY,
     // Fixtures pass capability admission so they exercise the pre-commit refusal boundary.
     getClientSettings: () => ({ nativeChatProviders: EVERY_AGENT_CHAT }),
     registerSubscriptionCleanup: vi.fn(),

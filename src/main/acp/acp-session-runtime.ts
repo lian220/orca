@@ -1,4 +1,5 @@
 import type { Readable, Writable } from 'node:stream'
+import { acpClientCapabilities } from './acp-client-capabilities'
 import { z } from 'zod'
 import { AcpRpcError } from './acp-errors'
 import { AcpPromptRequest } from './acp-prompt-request'
@@ -53,6 +54,7 @@ export type AcpSessionRuntimeOptions = {
   retryBusyPrompts?: boolean
   clientInfo?: InitializeRequest['clientInfo']
   clientCapabilities?: Pick<ClientCapabilities, 'elicitation'>
+  clientCapabilitiesMeta?: ClientCapabilities['_meta']
   peer?: AcpPeerOptions
   onPermission?: AcpPermissionHandler
   /** After abort, handlers still reply or throw (-32800); close ends unanswered requests. */
@@ -117,11 +119,10 @@ export class AcpSessionRuntime {
       'initialize',
       {
         protocolVersion: ACP_PROTOCOL_VERSION,
-        clientCapabilities: {
-          fs: { readTextFile: false, writeTextFile: false },
-          terminal: false,
-          ...this.options.clientCapabilities
-        },
+        clientCapabilities: acpClientCapabilities(
+          this.options.clientCapabilities,
+          this.options.clientCapabilitiesMeta
+        ),
         ...(this.options.clientInfo === undefined ? {} : { clientInfo: this.options.clientInfo })
       } satisfies InitializeRequest,
       InitializeResponseSchema

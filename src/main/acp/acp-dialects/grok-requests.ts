@@ -29,7 +29,7 @@ const planRequestSchema = z.object({
   planContent: z.string().nullish()
 })
 
-function questionRequest(params: unknown): AcpRequestPresentation {
+export function questionRequest(params: unknown): AcpRequestPresentation {
   const parsed = questionRequestSchema.safeParse(params)
   if (!parsed.success) {
     throw new AcpRpcError(-32602, 'Invalid agent question request')

@@ -112,6 +112,11 @@ export class RuntimeMachineName {
   }
 
   read(): string {
-    return normalizeMachineName(this.readConfiguredName()) || sharedDetectedName || this.hostname
+    return normalizeMachineName(this.readConfiguredName()) || this.readSystemName()
+  }
+
+  /** The operating system's own computer name, ignoring the alias configured in Orca. */
+  readSystemName(): string {
+    return sharedDetectedName || this.hostname
   }
 }

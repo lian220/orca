@@ -87,6 +87,9 @@ export async function initializeAcpStructuredSession(
       replayed = input.lanes.finishLoad()
       attaching.translator.finishLoad()
     } catch (error) {
+      if (spec.resumeFailurePolicy === 'fail') {
+        throw error
+      }
       takeover = acpReopenTakeover(error, resume, {
         // An agent already exited, its output still draining, has no session to take over in.
         over: connection.closed || connection.exited || input.abandoned(),

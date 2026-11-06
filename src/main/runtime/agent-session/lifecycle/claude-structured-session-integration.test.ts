@@ -1,3 +1,4 @@
+import { TEST_RUNTIME_IDENTITY } from '../../rpc/methods/structured-agent-session-rpc-client.test-fixture'
 import { EVERY_AGENT_CHAT } from '../../../../shared/native-chat/every-agent-chat.test-fixture'
 import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
@@ -216,7 +217,7 @@ beforeEach(async () => {
   _internals.resetCachesForTests()
   hookServer = new AgentHookServer()
   const runtime = {
-    getRuntimeId: () => 'runtime-1',
+    ...TEST_RUNTIME_IDENTITY,
     getClientSettings: () => ({ nativeChatProviders: EVERY_AGENT_CHAT }),
     getStructuredAgentSessionCreateSupport: async () => ({ supported: true }),
     structuredAgentSessionLaunchSeedOptions: () => undefined,

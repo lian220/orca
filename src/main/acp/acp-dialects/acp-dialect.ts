@@ -86,6 +86,8 @@ export type AcpCompactionReply = { outcome: 'skipped' | 'failed'; detail: string
 
 /** Hooks interpret extensions; lifecycle and row identity stay shared. */
 export type AcpDialect = {
+  /** Extension capabilities advertised in `initialize` so the agent knows what Orca renders. */
+  clientCapabilitiesMeta?: ClientCapabilities['_meta']
   /** Effort replaces part of the native composite model selection. */
   effortChangesModel?: true
   subagentStop?: {

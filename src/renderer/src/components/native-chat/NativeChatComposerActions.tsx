@@ -231,6 +231,7 @@ export const NativeChatComposerActions = memo(function NativeChatComposerActions
       <div className="ml-auto flex items-center gap-1.5">
         {/* Keep option pickers beside the session actions they affect. */}
         <NativeChatSessionOptionPickers
+          agent={agent}
           surface={sessionOptionsSurface}
           snapshot={sessionOptionsSnapshot}
           isWorking={isWorking}

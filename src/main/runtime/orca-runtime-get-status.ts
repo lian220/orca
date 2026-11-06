@@ -186,6 +186,10 @@ export abstract class OrcaRuntimeWithGetStatus extends RuntimeWorkspaceChangeEve
     return this.machineName.read()
   }
 
+  readSystemMachineName(): string {
+    return this.machineName.readSystemName()
+  }
+
   readPairedDeviceName(deviceId: string): string | null {
     return this.getPairedDeviceNameFn(deviceId)
   }

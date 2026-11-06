@@ -22,13 +22,25 @@ import { structuredCallerFor } from './structured-agent-session-gate'
 
 type ReceiptReader = Pick<RpcContext, 'runtime' | 'caller' | 'clientId' | 'clientKind'>
 
+/** A local reader names local answers by this machine, so wait for its name before the first projection. */
+export async function prepareLocalReceiptReader(ctx: ReceiptReader): Promise<void> {
+  if (isNativeChatLocalResolver(structuredCallerFor(ctx).callerKey)) {
+    await ctx.runtime.machineNameReady()
+  }
+}
+
 function resolverDevice(
   resolvedBy: string,
   ctx: ReceiptReader
 ): AgentJournalResolution['resolvedByDevice'] {
   const caller = structuredCallerFor(ctx).callerKey
   const local = isNativeChatLocalResolver(resolvedBy)
-  if (resolvedBy === caller || (local && isNativeChatLocalResolver(caller))) {
+  // A local answer read locally still names the machine: the user sees which computer answered.
+  if (local && isNativeChatLocalResolver(caller)) {
+    const name = ctx.runtime.readSystemMachineName()
+    return name?.trim() ? { kind: 'named', name } : { kind: 'current' }
+  }
+  if (!local && resolvedBy === caller) {
     return { kind: 'current' }
   }
   const name = local ? ctx.runtime.readMachineName() : ctx.runtime.readPairedDeviceName(resolvedBy)

@@ -52,6 +52,10 @@ export function structuredAgentSessionShownSnapshot(
 ): SessionOptionDescriptor[] {
   const view = structuredAgentSessionOptionView(state, undefined, {})
   const snapshot = structuredAgentSessionOptionSnapshot(view)
+  // A Hermes model value is its routing policy, not the model that answers; never show it as a choice.
+  if (view.record.agent === 'hermes') {
+    return snapshot.filter((descriptor) => descriptor.id === AGENT_CHAT_PERMISSION_MODE_OPTION_ID)
+  }
   const modelOption = snapshot.find((descriptor) => descriptor.id === 'model')
   const model = modelOption?.kind.currentValue
   const descriptor = snapshot.find((entry) => entry.id === 'effort')

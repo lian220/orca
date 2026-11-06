@@ -156,3 +156,6 @@ ci-shards/
 /.build/windows-native-benchmark/
 
 .local/static-analysis-research/
+
+# Personal Orca Lian build output (config/electron-builder.lian.cjs).
+/dist-lian/

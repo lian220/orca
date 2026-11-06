@@ -69,6 +69,7 @@ import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../../../shared/layout-owner-switc
 import { refusingStructuredAgentSessionCreatesClosedFirst } from './structured-agent-session-close-before-create'
 import * as queuedImages from './structured-agent-session-queued-image-capability'
 import {
+  prepareLocalReceiptReader,
   projectReceiptDeviceEvent,
   projectReceiptDeviceHistory
 } from './structured-agent-session-receipt-devices'
@@ -206,25 +207,25 @@ export const STRUCTURED_AGENT_SESSION_METHODS = [
     params: HistoryParams,
     handler: async (params, ctx) => {
       const host = await requireInstalledHost(ctx, params.sessionId)
-      return projectReceiptDeviceHistory(
-        projectTurnItemHistory(
-          queuedImages.projectQueuedImageCardHistory(
-            projectBackgroundTaskHistory(
-              await host.history(
-                params,
-                undefined,
-                queuedImages.queuedImageHistoryReader(ctx),
-                clientSupportsSnapshotCatchUp(ctx) && clientReadsCurrentRequests(ctx)
-              ),
-              ctx
+      const history = projectTurnItemHistory(
+        queuedImages.projectQueuedImageCardHistory(
+          projectBackgroundTaskHistory(
+            await host.history(
+              params,
+              undefined,
+              queuedImages.queuedImageHistoryReader(ctx),
+              clientSupportsSnapshotCatchUp(ctx) && clientReadsCurrentRequests(ctx)
             ),
             ctx
           ),
-          ctx,
-          host.sessionAgent(params.sessionId)
+          ctx
         ),
-        ctx
+        ctx,
+        host.sessionAgent(params.sessionId)
       )
+      // Read the page first so waiting for the machine name never changes which page is served.
+      await prepareLocalReceiptReader(ctx)
+      return projectReceiptDeviceHistory(history, ctx)
     }
   }),
   defineStreamingMethod({
@@ -233,6 +234,7 @@ export const STRUCTURED_AGENT_SESSION_METHODS = [
     params: SubscribeParams,
     handler: async (params, ctx, emit) => {
       const host = await requireInstalledHost(ctx, params.sessionId)
+      await prepareLocalReceiptReader(ctx)
       const subscriptionId = subscriptionIdFor(ctx, params.sessionId)
       // A stream reads; it never keeps an agent alive or starts one.
       let dispose = (): void => {}

@@ -1,3 +1,4 @@
+import { lianProfilePath } from '../../shared/lian-build'
 import { app } from 'electron'
 import { guardExternalOpensInE2E } from './e2e-external-open-guard'
 import { quitProcess } from './process-quit-request'
@@ -203,6 +204,17 @@ export function configureDevUserDataPath(isDev: boolean): void {
     return
   }
 
+  // The personal Orca Lian build keeps its conversations apart from the official app's.
+  const lianProfile = lianProfilePath(
+    '',
+    app.getPath('appData'),
+    process.execPath,
+    process.env.ORCA_LIAN_VERIFICATION_PROFILE
+  )
+  if (lianProfile) {
+    app.setPath('userData', lianProfile)
+    return
+  }
   if (!isDev) {
     return
   }

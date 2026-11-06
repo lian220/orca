@@ -1,3 +1,4 @@
+import { isLianBuild } from '../../../shared/lian-build'
 import { app, powerMonitor } from 'electron'
 import type { BrowserWindow } from 'electron'
 import type { ReleaseBuild, ReleaseChannel } from '../../../shared/release-channel'
@@ -40,19 +41,32 @@ export type UpdaterSetupOptions = {
 }
 
 export class UpdaterSetup extends UpdaterDownloadInstall {
+  // Orca Lian is rebuilt by hand; the official updater must never replace it.
   checkForUpdates(): void {
+    if (isLianBuild('', process.execPath)) {
+      return
+    }
     this.checkForUpdatesInBackground()
   }
 
   checkForUpdatesFromMenu(options?: UpdateCheckOptions): void {
+    if (isLianBuild('', process.execPath)) {
+      return
+    }
     super.checkForUpdatesFromMenu(options)
   }
 
   downloadUpdate(): void {
+    if (isLianBuild('', process.execPath)) {
+      return
+    }
     super.downloadUpdate()
   }
 
   quitAndInstall(): void {
+    if (isLianBuild('', process.execPath)) {
+      return
+    }
     super.quitAndInstall()
   }
 
@@ -61,6 +75,9 @@ export class UpdaterSetup extends UpdaterDownloadInstall {
   }
 
   getUpdateStatus(): UpdateStatus {
+    if (isLianBuild('', process.execPath)) {
+      return { state: 'idle' }
+    }
     return super.getUpdateStatus()
   }
 
@@ -140,7 +157,7 @@ export class UpdaterSetup extends UpdaterDownloadInstall {
       this.sendErrorStatus(`The server update did not complete: ${serveHandoffFailure}`, true)
     }
 
-    if (!app.isPackaged) {
+    if (!app.isPackaged || isLianBuild('', process.execPath)) {
       return
     }
 

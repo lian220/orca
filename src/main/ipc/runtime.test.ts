@@ -56,7 +56,7 @@ describe('registerRuntimeHandlers', () => {
   })
 
   it.each(['desktop-renderer', 'trusted-local:runtime'])(
-    'identifies an answer by %s as this computer through desktop IPC',
+    'names an answer by %s after this computer through desktop IPC',
     async (resolvedBy) => {
       installStructuredHostStub()
       try {
@@ -89,7 +89,9 @@ describe('registerRuntimeHandlers', () => {
         // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this IPC read uses only identity/name methods; the installed host supplies journal reads.
         registerRuntimeHandlers({
           getRuntimeId: () => 'runtime-1',
-          readMachineName: () => 'Work Mac',
+          machineNameReady: async () => {},
+          readMachineName: () => 'Orca alias',
+          readSystemMachineName: () => 'Work Mac',
           readPairedDeviceName: () => null
         } as never)
         const handler = handleMock.mock.calls.find(([channel]) => channel === 'runtime:call')![1]
@@ -100,7 +102,11 @@ describe('registerRuntimeHandlers', () => {
         expect(response).toMatchObject({
           ok: true,
           result: {
-            page: { items: [{ body: { resolution: { resolvedByDevice: { kind: 'current' } } } }] }
+            page: {
+              items: [
+                { body: { resolution: { resolvedByDevice: { kind: 'named', name: 'Work Mac' } } } }
+              ]
+            }
           }
         })
       } finally {

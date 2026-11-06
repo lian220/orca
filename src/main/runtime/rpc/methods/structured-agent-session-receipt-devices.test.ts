@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest'
 import type { AgentSessionSubscribeInput } from '../../../native-chat/agent-session-wire/structured-agent-session-subscribers'
 import {
   call,
+  attachParams,
   clearStructuredHostStub,
   hostCalls,
   installStructuredHostStub,
@@ -121,9 +122,13 @@ it.each(['snapshot', 'batch', 'reset'] as const)(
   }
 )
 
-it.each(['desktop-renderer', 'trusted-local:runtime'])(
-  'names a historical local answer by %s for a paired reader',
-  async (resolvedBy) => {
+it.each(
+  ['desktop-renderer', 'trusted-local:runtime'].flatMap((resolvedBy) =>
+    [undefined, DEVICE_ID].map((clientId) => ({ resolvedBy, clientId }))
+  )
+)(
+  'names a historical local answer for $resolvedBy read by $clientId',
+  async ({ resolvedBy, clientId }) => {
     if (receipt.body.kind !== 'question') {
       throw new Error('expected question')
     }
@@ -138,8 +143,8 @@ it.each(['desktop-renderer', 'trusted-local:runtime'])(
     const response = await call(
       'agentSession.history',
       { sessionId: SESSION, direction: 'tail' },
-      { ...STRUCTURED_CLIENT, clientId: DEVICE_ID },
-      { readMachineName: () => 'Work Mac' }
+      { ...STRUCTURED_CLIENT, clientId },
+      { readMachineName: () => 'Paired host alias', readSystemMachineName: () => 'Work Mac' }
     )
     expect(response).toMatchObject({
       ok: true,
@@ -148,12 +153,84 @@ it.each(['desktop-renderer', 'trusted-local:runtime'])(
           items: [
             {
               body: {
-                resolution: { resolvedByDevice: { kind: 'named', name: 'Work Mac' } }
+                resolution: {
+                  resolvedByDevice: {
+                    kind: 'named',
+                    name: clientId ? 'Paired host alias' : 'Work Mac'
+                  }
+                }
               }
             }
           ]
         }
       }
     })
+  }
+)
+
+it.each(['history', 'subscribe', 'ensure', 'create', 'item'] as const)(
+  'publishes the ready machine name on the first local %s receipt',
+  async (method) => {
+    if (receipt.body.kind !== 'question') {
+      throw new Error('expected question')
+    }
+    const item = {
+      ...receipt,
+      body: {
+        ...receipt.body,
+        resolution: { ...receipt.body.resolution, resolvedBy: 'desktop-renderer' }
+      }
+    }
+    const page = {
+      sessionId: SESSION,
+      epoch: 'a',
+      direction: 'tail' as const,
+      items: [item],
+      submissions: [],
+      removedItemIds: [],
+      window: { oldest: null, newest: null, nextCursor: { epoch: 'a', sequence: 1 } },
+      hasOlder: false,
+      hasNewer: false
+    }
+    hostCalls.history.mockReturnValue({ ok: true, page })
+    hostCalls.journalSnapshot.mockReturnValue(page)
+    hostCalls.attach.mockResolvedValue({ ok: true, value: { page } })
+    hostCalls.subscribe.mockImplementation((input: AgentSessionSubscribeInput) => {
+      input.emit({ type: 'snapshot', sessionId: SESSION, fence: 1, page })
+      return () => {}
+    })
+    let name = 'host.example.internal'
+    const response = await call(
+      `agentSession.${method}`,
+      method === 'ensure' || method === 'create'
+        ? attachParams()
+        : method === 'history'
+          ? { sessionId: SESSION, direction: 'tail' }
+          : method === 'item'
+            ? { sessionId: SESSION, itemId: receipt.itemId }
+            : { sessionId: SESSION },
+      undefined,
+      {
+        readSystemMachineName: () => name,
+        readMachineName: () => 'Paired host alias',
+        machineNameReady: async () => {
+          await Promise.resolve()
+          name = 'Work Mac'
+        }
+      }
+    )
+    const projectedItem = {
+      body: { resolution: { resolvedByDevice: { kind: 'named', name: 'Work Mac' } } }
+    }
+    expect(response).toMatchObject({
+      ok: true,
+      result:
+        method === 'item'
+          ? { item: projectedItem }
+          : method === 'ensure' || method === 'create'
+            ? { value: { page: { items: [projectedItem] } } }
+            : { page: { items: [projectedItem] } }
+    })
+    expect(item.body.resolution).not.toHaveProperty('resolvedByDevice')
   }
 )

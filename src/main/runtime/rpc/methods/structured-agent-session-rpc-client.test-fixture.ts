@@ -62,3 +62,11 @@ export function attachParams(overrides: Record<string, unknown> = {}) {
 export function request(method: string, params: unknown): RpcRequest {
   return { id: 'request-1', authToken: 'token', method, params }
 }
+
+export const TEST_RUNTIME_IDENTITY = {
+  getRuntimeId: () => 'runtime-1',
+  machineNameReady: async () => {},
+  readMachineName: () => 'Work Mac',
+  readSystemMachineName: () => 'Work Mac',
+  readPairedDeviceName: () => null
+}

@@ -86,6 +86,22 @@ export function sendStructuredAgentSessionTurn(
           if (blocked) {
             return blocked
           }
+          // Admission runs under the conversation's mutation lane. A send that did not ask to queue
+          // is refused, so a busy refusal never becomes an automatic later execution.
+          if (
+            params.delivery !== 'queue-if-active' &&
+            ctx.agents.capabilities(ctx.agent)?.concurrentSendPolicy === 'reject' &&
+            contextStructuredAgentSessionCurrentWork(ctx).working()
+          ) {
+            return {
+              ok: false as const,
+              refusal: refuse(
+                'agent_session_operation_invalid',
+                { reason: 'turnActive' },
+                'The agent is still working. This message was not sent. Wait for the current turn to finish.'
+              )
+            }
+          }
           if (params.usageLimitContinuationOfTurnItemId !== undefined) {
             const snapshot = ctx.journal.statusRead()
             const cut = latestNativeChatUsageLimitCut(snapshot.items, snapshot.submissions)
